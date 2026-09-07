@@ -1,3 +1,5 @@
+# Display IP address on ST7735 LCD for about 30 seconds, updating every 5 seconds. Then exit the program.
+
 import subprocess
 import time
 import st7735
@@ -20,7 +22,9 @@ HEIGHT = disp.height
 
 font = ImageFont.load_default()
 
-while True:
+end_time = time.monotonic() + 30  # Run for about 30 seconds.
+
+while time.monotonic() < end_time:
     try:
         ip_output = subprocess.check_output(
             ["hostname", "-I"],
