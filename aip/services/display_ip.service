@@ -1,0 +1,14 @@
+[Unit]
+Description=Enviro Plus Display IP Address On LCD
+After=network.target
+
+[Service]
+Type=simple
+User=egh455-g12
+WorkingDirectory=/home/egh455-g12/EGH455-Group-12
+ExecStart=/home/egh455-g12/EGH455-Group-12/.venv/bin/python /home/egh455-g12/EGH455-Group-12/display_ip.py
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
