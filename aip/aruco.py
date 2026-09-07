@@ -4,7 +4,7 @@ import cv2
 
 
 # Must match the dictionary used to generate the physical markers.
-ARUCO_DICTIONARY = cv2.aruco.DICT_4X4_50
+ARUCO_DICTIONARY = cv2.aruco.DICT_5X5_50
 _detector = cv2.aruco.ArucoDetector(
     cv2.aruco.getPredefinedDictionary(ARUCO_DICTIONARY),
     cv2.aruco.DetectorParameters(),
