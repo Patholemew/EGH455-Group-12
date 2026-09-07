@@ -1,6 +1,7 @@
 """Entry point for the AIP subsystem."""
 from camera import Camera
-from aruco import close_display, display_frame
+from aruco import detect_aruco, draw_aruco
+from display import close_display, display_frame
     
 def main():
     """Capture and display camera frames until Q, Escape, or Ctrl+C."""
@@ -16,15 +17,14 @@ def main():
             if frame is None:
                 continue
 
-            if not display_frame(frame):
-                break
-
             # Pass the same frame to each processing module
-            # aruco_result = detect_aruco(frame)
+            corners, ids = detect_aruco(frame)
             # valve_result = detect_valve(frame)
             # gauge_result = detect_gauge(frame)
 
-            # Print results
+            annotated = draw_aruco(frame, corners, ids)
+            if not display_frame(annotated):
+                break
             
             
     except KeyboardInterrupt:

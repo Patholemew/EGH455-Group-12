@@ -1,15 +1,31 @@
-"""Display camera frames for the ArUco processing module."""
+"""Detect ArUco markers and annotate camera frames."""
 
 import cv2
 
 
-def display_frame(frame):
-    """Show a BGR camera frame and return False when the user requests exit."""
-    cv2.imshow("AIP - ArUco", frame)
-    key = cv2.waitKey(1) & 0xFF
-    return key not in (ord("q"), ord("Q"), 27)
+# Must match the dictionary used to generate the physical markers.
+ARUCO_DICTIONARY = cv2.aruco.DICT_4X4_50
+_detector = cv2.aruco.ArucoDetector(
+    cv2.aruco.getPredefinedDictionary(ARUCO_DICTIONARY),
+    cv2.aruco.DetectorParameters(),
+)
 
 
-def close_display():
-    """Close the OpenCV display windows."""
-    cv2.destroyAllWindows()
+def detect_aruco(frame):
+    """Return (corners, ids) for a BGR or grayscale frame without modifying it.
+
+    Each corners entry has shape (1, 4, 2), with pixel coordinates ordered
+    clockwise from the marker's top-left corner. IDs have shape (N, 1), or
+    are None when no markers are detected.
+    """
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) if frame.ndim == 3 else frame
+    corners, ids, _ = _detector.detectMarkers(gray)
+    return corners, ids
+
+
+def draw_aruco(frame, corners, ids):
+    """Return a copy of the frame with marker outlines and IDs drawn on it."""
+    annotated = frame.copy()
+    if ids is not None:
+        cv2.aruco.drawDetectedMarkers(annotated, corners, ids)
+    return annotated
