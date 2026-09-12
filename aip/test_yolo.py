@@ -37,7 +37,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 DEFAULT_MODEL = (
     SCRIPT_DIR
     / "models"
-    / "best_8-9-26_2147_py312.rvc2.tar.xz"
+    / "best_py312_12-09_1706.rvc2.tar.xz"
 )
 
 
@@ -267,7 +267,7 @@ def main():
         camera_output = camera.requestOutput(
             size=input_size,
             type=dai.ImgFrame.Type.BGR888p,
-            resize_mode=dai.ImgResizeMode.LETTERBOX,
+            resizeMode=dai.ImgResizeMode.LETTERBOX,
             fps=args.fps,
         )
 
