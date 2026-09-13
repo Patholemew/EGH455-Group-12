@@ -6,10 +6,7 @@ Run the subsystem entry point from the repository root:
 python3 aq/aq_main.py
 ```
 
-`aq_main.py` is a scaffold for subsystem startup and coordination. It currently
-prints the most recent sensor data when run and shows methods on how to upload
-information to the server. The server function has not been implemented and a
-proxy is put in place.
+`aq_main.py` is a scaffold for subsystem startup and coordination. It currently prints the most recent sensor data when run and shows methods on how to upload information to the server. The server function has not been implemented and a proxy is put in place.prints the most recent sensor data when run and shows methods on how to upload information to the server. The server function has not been implemented and a proxy is put in place.
 
 ## Existing Scripts
 
