@@ -95,6 +95,7 @@ class readings:
         self.pressure.append(pressure)
         self.timestamp.append(time.time())
 
+
     def recent_readings(self):
         """Lightweight way of Transferring Data to Server"""
         # Reads the most recent/last data in the array
@@ -108,6 +109,20 @@ class readings:
         pressure = self.pressure[-1]
         timestamp = self.timestamp[-1]
         return cpu_temp, env_temp, oxidising, reducing, nh3, light, humidity, pressure, timestamp
+
+    def manual_record_data(self, cpu_temp, env_temp, oxidising, reducing, nh3, light, humidity, pressure, timestamp):
+        """For the lightweight method: it may be useful to manually record the history yourself in new class
+            rather than sending the entire class each time you want new data."""
+        # Does not automatically sort by time - be cautious when using.
+        self.cpu_temps_record.append(cpu_temp)
+        self.env_temps_record.append(env_temp)
+        self.gases.oxidising.append(oxidising)
+        self.gases.reducing.append(reducing)
+        self.gases.nh3.append(nh3)
+        self.light.append(light)
+        self.humidity.append(humidity)
+        self.pressure.append(pressure)
+        self.timestamp.append(timestamp)
 
     def print_data(self):
         """Prints most recent data to the Terminal"""
