@@ -1,5 +1,6 @@
 """Entry point for the AIP subsystem."""
 
+import argparse
 from pathlib import Path
 import time
 
@@ -8,6 +9,7 @@ import cv2
 from aruco import detect_aruco, draw_aruco
 from oak_detector import OakDetector
 from gauge_reader import read_gauge
+from pose import PoseEstimator
 
 
 MODEL = (
@@ -35,7 +37,7 @@ def process_gauge(gauges):
     return read_gauge(gauges[0])
 
 
-def print_results(result, gauge_reading):
+def print_results(result, gauge_reading, marker_poses=()):
     """Print current AIP detection results."""
 
     # Gauge reading
@@ -65,9 +67,27 @@ def print_results(result, gauge_reading):
             valve["centre"],
         )
 
+    # Camera position relative to each detected marker
+    for pose in marker_poses:
+        x, y, z = pose.camera_position_m
+        print(
+            f"ArUco ID {pose.marker_id}: camera "
+            f"X {x:+.3f} Y {y:+.3f} Z {z:+.3f} m"
+        )
 
-def main():
+
+def main(argv=None):
     """Run the AIP subsystem."""
+
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--marker-size-mm",
+        type=float,
+        default=200.0,
+        help="Marker side length excluding the white margin, in mm (default: 200)",
+    )
+    args = parser.parse_args(argv)
+    pose_estimator = PoseEstimator(args.marker_size_mm / 1000.0)
 
     with OakDetector(
         MODEL,
@@ -107,14 +127,18 @@ def main():
                 # Detect ArUco markers
                 aruco_corners, aruco_ids = detect_aruco(frame)
                 
-                # ArUco Pose estimation TODO
-                
+                marker_poses = pose_estimator.estimate(
+                    frame, aruco_corners, aruco_ids,
+                )
 
                 # Draw ArUco markers on the annotated frame
                 annotated_frame = draw_aruco(
                     annotated_frame,
                     aruco_corners,
                     aruco_ids,
+                )
+                annotated_frame = pose_estimator.draw(
+                    annotated_frame, marker_poses,
                 )
 
                 # ---------------------------------------------------------
@@ -125,6 +149,7 @@ def main():
                     print_results(
                         result,
                         gauge_reading,
+                        marker_poses,
                     )
 
                 # ---------------------------------------------------------
