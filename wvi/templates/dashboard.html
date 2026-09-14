@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+
+<h1>Payload dashboard</h1>
+<section class="panel">
+  <div class="panel-heading">
+    <h2>Live video</h2>
+    <span id="video-state" class="badge">Waiting</span>
+  </div>
+  <img id="live-video" alt="Latest annotated camera frame">
+</section>
+<section class="panel">
+  <div class="panel-heading">
+    <h2>Environment readings</h2>
+    <span id="air-state" class="badge">Waiting</span>
+  </div>
+  <div class="readings">
+    <div class="reading">
+      <span>Temperature</span><strong id="temperature_c">—</strong><small>°C</small>
+    </div>
+    <div class="reading">
+      <span>Pressure</span><strong id="pressure_hpa">—</strong><small>hPa</small>
+    </div>
+    <div class="reading">
+      <span>Humidity</span><strong id="humidity_pct">—</strong><small>%</small>
+    </div>
+    <div class="reading">
+      <span>Light</span><strong id="light_lux">—</strong><small>lux</small>
+    </div>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="panel-heading">
+    <h2>Gas readings</h2>
+  </div>
+  <div class="readings">
+    <div class="reading">
+      <span>Reducing Gases</span><strong id="gas_reducing">—</strong><small>CONFIRM UNIT</small>
+    </div>
+    <div class="reading">
+      <span>Oxidising Gases</span><strong id="gas_oxidising">—</strong><small>CONFIRM UNIT</small>
+    </div>
+    <div class="reading">
+      <span>Ammonia</span><strong id="gas_ammonia">—</strong><small>CONFIRM UNIT</small>
+    </div>
+  </div>
+</section>
+
+{% endblock %}
