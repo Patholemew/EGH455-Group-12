@@ -73,24 +73,17 @@ def angle_to_measurement(angle, gauge_type):
     if angle is None:
         return None
 
-    # ---------------------------------------------------------
-    # TODO: Replace with your calibrated equations.
-    #
-    # Example:
-    #
-    # if gauge_type == "Blue Gauge":
-    #     measurement = m_blue * angle + c_blue
-    #
-    # elif gauge_type == "Plain Gauge":
-    #     measurement = m_plain * angle + c_plain
-    #
-    # else:
-    #     return None
-    #
-    # return measurement
-    # ---------------------------------------------------------
 
-    return None
+    if gauge_type == "Blue Gauge":
+        measurement = 0.0356 * angle - 1.4226
+    
+    elif gauge_type == "Plain Gauge":
+        measurement = 0.0368 * angle - 1.5254
+    
+    else:
+        return None
+    
+    return measurement
 
 
 def read_gauge(gauge):
