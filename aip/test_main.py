@@ -4,6 +4,7 @@ import time
 import cv2
 
 from oak_detector import OakDetector
+from gauge_reader import read_gauge
 
 
 MODEL = (
@@ -26,6 +27,41 @@ with OakDetector(
         while True:
 
             result = detector.read()
+
+            # -------------------------------------------------------------
+            # Gauge reading
+            # -------------------------------------------------------------
+
+            if result["gauges"]:
+
+                gauge = result["gauges"][0]
+
+                reading = read_gauge(gauge)
+
+                if reading["valid"]:
+
+                    print(
+                        f'{reading["type"]} | '
+                        f'Angle: {reading["angle"]:.1f} deg'
+                    )
+
+                    # Measurement will be None until you add your
+                    # angle-to-measurement calibration function.
+                    if reading["measurement"] is not None:
+                        print(
+                            f'Measurement: '
+                            f'{reading["measurement"]:.2f}'
+                        )
+
+                else:
+                    print(
+                        f'{gauge["type"]} detected, '
+                        f'but centre/tip could not be determined'
+                    )
+
+            else:
+
+                print("No reliable gauge detected")
 
             # ---------------------------------------------
             # Plain frame for teammate's OpenCV ArUco code
