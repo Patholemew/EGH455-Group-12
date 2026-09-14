@@ -419,6 +419,21 @@ class OakDetector:
             )
         ]
 
+        # -------------------------------------------------------------
+        # Only one real gauge can be present.
+        # If YOLO produces multiple gauge detections, keep the largest.
+        # -------------------------------------------------------------
+
+        if gauge_detections:
+
+            largest_gauge = max(
+                gauge_detections,
+                key=lambda d: bbox_area(d["bbox"])
+            )
+
+            gauge_detections = [largest_gauge]
+            
+
         centre_detections = [
             d for d in detections
             if d["label"] == "Gauge Centre"
