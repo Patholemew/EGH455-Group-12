@@ -10,7 +10,7 @@ from gauge_reader import read_gauge
 MODEL = (
     Path(__file__).resolve().parent
     / "models"
-    / "best_py312_12-09_1706.rvc2.tar.xz"
+    / "best_py312_14-09_1828.rvc2.tar.xz"
 )
 
 
