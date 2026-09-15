@@ -1,3 +1,5 @@
+"""Entry point for the AIP subsystem."""
+
 from pathlib import Path
 import time
 
@@ -13,158 +15,141 @@ MODEL = (
     / "best_py312_14-09_1828.rvc2.tar.xz"
 )
 
+CONFIDENCE = 0.40
+SHOW_DISPLAY = True
+PRINT_RESULTS = True
+
+
+def process_gauge(gauges):
+    """Read the first detected gauge.
+
+    Returns
+    -------
+    dict | None
+        Gauge reading dictionary, or None if no gauge is detected.
+    """
+    if not gauges:
+        return None
+
+    return read_gauge(gauges[0])
+
+
+def print_results(result, gauge_reading):
+    """Print current AIP detection results."""
+
+    # Gauge reading
+    if gauge_reading is None:
+        print("No reliable gauge detected")
+
+    elif gauge_reading["valid"]:
+        print(
+            f'{gauge_reading["type"]} | Angle: {gauge_reading["angle"]:.1f} deg'
+        )
+
+        if gauge_reading["measurement"] is not None:
+            print(
+                f'Measurement: {gauge_reading["measurement"]:.2f}'
+            )
+
+    else:
+        print(
+            f'{gauge_reading["type"]} detected, but centre/tip could not be determined'
+        )
+
+    # Valve detections
+    for valve in result["valves"]:
+        print(
+            "Valve:",
+            valve["state"],
+            valve["centre"],
+        )
+
 
 def main():
-    """Run OAK-D detections until the user quits or interrupts the program."""
+    """Run the AIP subsystem."""
+
     with OakDetector(
         MODEL,
-        confidence=0.40,
+        confidence=CONFIDENCE,
     ) as detector:
-    
-        count = 0
-        start = time.monotonic()
-    
+
+        frame_count = 0
+        fps_start = time.monotonic()
+
         try:
-    
             while True:
-    
+
+                # ---------------------------------------------------------
+                # Run object detection
+                # ---------------------------------------------------------
+
                 result = detector.read()
-    
-                # -------------------------------------------------------------
-                # Gauge reading
-                # -------------------------------------------------------------
-    
-                if result["gauges"]:
-    
-                    gauge = result["gauges"][0]
-    
-                    reading = read_gauge(gauge)
-    
-                    if reading["valid"]:
-    
-                        print(
-                            f'{reading["type"]} | '
-                            f'Angle: {reading["angle"]:.1f} deg'
-                        )
-    
-                        # Measurement will be None until you add your
-                        # angle-to-measurement calibration function.
-                        if reading["measurement"] is not None:
-                            print(
-                                f'Measurement: '
-                                f'{reading["measurement"]:.2f}'
-                            )
-    
-                    else:
-                        print(
-                            f'{gauge["type"]} detected, '
-                            f'but centre/tip could not be determined'
-                        )
-    
-                else:
-    
-                    print("No reliable gauge detected")
-    
-                # ---------------------------------------------
-                # Plain frame for teammate's OpenCV ArUco code
-                # ---------------------------------------------
-    
-                plain_frame = result["frame"]
-    
-                # Example later:
+
+                # Raw frame for other AIP algorithms
+                frame = result["frame"]
+                
+                # Annotated frame for display
+                annotated_frame = result["annotated_frame"]
+
+                # ---------------------------------------------------------
+                # Gauge processing
+                # ---------------------------------------------------------
+
+                gauge_reading = process_gauge(
+                    result["gauges"]
+                )
+
+                # ---------------------------------------------------------
+                # ArUco pose estimation
+                # ---------------------------------------------------------
+
+                # Teammate's OpenCV ArUco processing can use:
                 #
-                # aruco_pose =
-                #     detect_aruco(plain_frame)
-    
-                # ---------------------------------------------
-                # Gauge results
-                # ---------------------------------------------
-    
-                for gauge in result["gauges"]:
-    
-                    print(
-                        "Gauge:",
-                        gauge["type"],
+                # aruco_pose = detect_aruco(frame)
+
+                # ---------------------------------------------------------
+                # Output / debugging
+                # ---------------------------------------------------------
+
+                if PRINT_RESULTS:
+                    print_results(
+                        result,
+                        gauge_reading,
                     )
-    
-                    print(
-                        "  Centre:",
-                        gauge["centre"],
-                    )
-    
-                    print(
-                        "  Needle tip:",
-                        gauge["needle_tip"],
-                    )
-    
-                    if (
-                        gauge["centre"] is not None
-                        and
-                        gauge["needle_tip"] is not None
-                    ):
-                        print(
-                            "  Valid gauge reading"
-                        )
-    
-                # ---------------------------------------------
-                # Valve results
-                # ---------------------------------------------
-    
-                for valve in result["valves"]:
-    
-                    print(
-                        "Valve:",
-                        valve["state"],
-                        valve["centre"],
-                    )
-    
-                # ---------------------------------------------
-                # YOLO ArUco results
-                # ---------------------------------------------
-    
-                for aruco in result["arucos"]:
-    
-                    print(
-                        "ArUco:",
-                        aruco["centre"],
-                    )
-    
-                # ---------------------------------------------
+
+                # ---------------------------------------------------------
                 # FPS
-                # ---------------------------------------------
-    
-                count += 1
-    
-                elapsed = (
-                    time.monotonic()
-                    - start
-                )
-    
+                # ---------------------------------------------------------
+
+                frame_count += 1
+                elapsed = time.monotonic() - fps_start
+
                 if elapsed >= 1.0:
-    
-                    print(
-                        f"FPS: "
-                        f"{count / elapsed:.1f}"
+                    if PRINT_RESULTS:
+                        print(
+                            f"FPS: "
+                            f"{frame_count / elapsed:.1f}"
+                        )
+
+                    frame_count = 0
+                    fps_start = time.monotonic()
+
+                # ---------------------------------------------------------
+                # Display
+                # ---------------------------------------------------------
+
+                if SHOW_DISPLAY:
+                    cv2.imshow(
+                        "OAK-D detections",
+                        result["annotated_frame"],
                     )
-    
-                    count = 0
-                    start = time.monotonic()
-    
-                # ---------------------------------------------
-                # Annotated output
-                # ---------------------------------------------
-    
-                cv2.imshow(
-                    "OAK-D detections",
-                    result["annotated_frame"],
-                )
-    
-                if (
-                    cv2.waitKey(1) & 0xFF
-                    == ord("q")
-                ):
-                    break
-    
+
+                    if (
+                        cv2.waitKey(1) & 0xFF
+                        == ord("q")
+                    ):
+                        break
+
         except KeyboardInterrupt:
             pass
 
