@@ -2,12 +2,12 @@ from flask import Flask, render_template, request, jsonify, abort, send_file, se
 import sqlite3
 import time
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
 import os 
 import json 
 import re
 from werkzeug.exceptions import HTTPException
-
+import requests
 
 app = Flask(__name__)
 DATA = Path(os.environ.get("WVI_DATA_DIR", str(Path(__file__).resolve().parent / "data")))
@@ -16,6 +16,7 @@ FRAME = Path(os.environ.get("WVI_FRAME_FILE", str(DATA / "liveimage.jpg")))
 FRAME_META = FRAME.with_suffix(".json")
 SNAPSHOTS = DATA / "snapshots"
 HEARTBEAT_MESSAGE = "Heartbeat: API responded"
+WVI_URL_AIR = "http://127.0.0.1:8000/api/air"
 
 def connect():
     con = sqlite3.connect(DATABASE, timeout=5)
@@ -84,6 +85,35 @@ def init_db():
 
 init_db()
 
+def send_to_wvi (sensor_readings):
+    newest_readings = sensor_readings.recent_readings()
+    cpu_temp = newest_readings[0]
+    env_temp = newest_readings[1]
+    oxidising = newest_readings[2]
+    reducing = newest_readings[3]
+    nh3 = newest_readings[4]
+    light = newest_readings[5]
+    humidity = newest_readings[6]
+    pressure = newest_readings[7]
+    timestamp = newest_readings[8]
+    
+    payload = {
+        "captured_at": datetime.fromtimestamp(timestamp, timezone.utc).isoformat(),
+        "temperature_c": env_temp,
+        "pressure_hpa": pressure,
+        "humidity_pct": humidity,
+        "light_lux": light,
+        "gas":
+            {
+                "gas_reducing": reducing,
+                "gax_oxidising": oxidising,
+                "gas_ammonia": nh3
+            },
+    }
+    with requests.post(WVI_URL_AIR, json=payload, timeout=2) as response:
+        response.raise_for_status()
+        return response.status_code
+    
 def parse_timestamp(value):
     stamp = datetime.fromisoformat(value)
     if stamp.tzinfo is None:
