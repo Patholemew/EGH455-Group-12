@@ -52,7 +52,6 @@ class OakDetector:
     - Gauge centres
     - Needle tips
     - Open / Closed valves
-    - ArUco detections
 
     Returns both:
     - plain frame
@@ -407,6 +406,13 @@ class OakDetector:
             for d in detection_message.detections
         ]
 
+        # Ignore the YOLO ArUco class.
+        # ArUco detection is handled separately using OpenCV.
+        detections = [
+            d for d in detections
+            if d["label"] != "ArUco"
+]
+
         # -------------------------------------------------------------
         # Split detections by type
         # -------------------------------------------------------------
@@ -452,11 +458,6 @@ class OakDetector:
             )
         ]
 
-        aruco_detections = [
-            d for d in detections
-            if d["label"] == "ArUco"
-        ]
-
         # -------------------------------------------------------------
         # Gauge validation / association
         # -------------------------------------------------------------
@@ -479,19 +480,6 @@ class OakDetector:
                 "confidence": d["confidence"],
             }
             for d in valve_detections
-        ]
-
-        # -------------------------------------------------------------
-        # Simplify ArUco output
-        # -------------------------------------------------------------
-
-        arucos = [
-            {
-                "centre": d["centre"],
-                "bbox": d["bbox"],
-                "confidence": d["confidence"],
-            }
-            for d in aruco_detections
         ]
 
         # -------------------------------------------------------------
@@ -518,8 +506,6 @@ class OakDetector:
             "gauges": gauges,
 
             "valves": valves,
-
-            "arucos": arucos,
         }
 
     def close(self):
