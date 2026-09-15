@@ -1,56 +1,88 @@
 """Entry point for the AIP subsystem."""
-import argparse
 
-from camera import Camera
-from aruco import detect_aruco, draw_aruco
-from display import close_display, display_frame
-from pose import PoseEstimator
-    
+from pathlib import Path
+import time
+
+import cv2
+
+from gauge_reader import read_gauge
+from oak_detector import OakDetector
+
+
+MODEL = (
+    Path(__file__).resolve().parent
+    / "models"
+    / "best_py312_14-09_1828.rvc2.tar.xz"
+)
+
+
 def main():
-    """Capture and display camera frames until Q, Escape, or Ctrl+C."""
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--marker-size-mm", type=float, default=200.0,
-                        help="Outer black square side length in millimetres (default: 200)")
-    args = parser.parse_args()
-    estimator = PoseEstimator(args.marker_size_mm / 1000)
-    camera = Camera()
+    """Run OAK-D detection until Q, Escape, or Ctrl+C is pressed."""
+    with OakDetector(MODEL, confidence=0.40) as detector:
+        count = 0
+        start = time.monotonic()
 
-    print("AIP system started. Press Q or Escape in the frame window to quit.")
-
-    try:
-        while True:
-            # Get the next BGR frame from OAK-D Lite
-            frame = camera.get_frame()
-
-            if frame is None:
-                continue
-
-            # Pass the same frame to each processing module
-            
-            # Identify each marker and locate the camera relative to it.
-            corners, ids = detect_aruco(frame)
-            poses = estimator.estimate(frame, corners, ids)
-            
-            # valve_result = detect_valve(frame)
-            
-            # gauge_result = detect_gauge(frame)
-
-            # Annotate the frame with the results of each module
-            annotated = draw_aruco(frame, corners, ids)
-            estimator.draw(annotated, poses)
-            
-            if not display_frame(annotated):
-                break
-            
-            
-    except KeyboardInterrupt:
-        print("Stopping AIP system")
-
-    finally:
         try:
-            camera.close()
+            while True:
+                result = detector.read()
+
+                if result["gauges"]:
+                    gauge = result["gauges"][0]
+                    reading = read_gauge(gauge)
+
+                    if reading["valid"]:
+                        print(
+                            f'{reading["type"]} | '
+                            f'Angle: {reading["angle"]:.1f} deg'
+                        )
+
+                        if reading["measurement"] is not None:
+                            print(f'Measurement: {reading["measurement"]:.2f}')
+                    else:
+                        print(
+                            f'{gauge["type"]} detected, '
+                            "but centre/tip could not be determined"
+                        )
+                else:
+                    print("No reliable gauge detected")
+
+                # Unannotated frame for future OpenCV ArUco processing.
+                plain_frame = result["frame"]
+
+                for gauge in result["gauges"]:
+                    print("Gauge:", gauge["type"])
+                    print("  Centre:", gauge["centre"])
+                    print("  Needle tip:", gauge["needle_tip"])
+
+                    if (
+                        gauge["centre"] is not None
+                        and gauge["needle_tip"] is not None
+                    ):
+                        print("  Valid gauge reading")
+
+                for valve in result["valves"]:
+                    print("Valve:", valve["state"], valve["centre"])
+
+                for aruco in result["arucos"]:
+                    print("ArUco:", aruco["centre"])
+
+                count += 1
+                elapsed = time.monotonic() - start
+
+                if elapsed >= 1.0:
+                    print(f"FPS: {count / elapsed:.1f}")
+                    count = 0
+                    start = time.monotonic()
+
+                cv2.imshow("OAK-D detections", result["annotated_frame"])
+                key = cv2.waitKey(1) & 0xFF
+                if key in (ord("q"), ord("Q"), 27):
+                    break
+
+        except KeyboardInterrupt:
+            print("Stopping AIP system")
         finally:
-            close_display()
+            cv2.destroyAllWindows()
 
 
 if __name__ == "__main__":
