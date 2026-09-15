@@ -14,3 +14,7 @@ Each subsystem has its own Python entry point and README:
 
 The entry points are scaffolds for future subsystem integration. Existing
 hardware scripts are documented in the corresponding subsystem README.
+
+## DepthAI Setup
+
+The project environment uses DepthAI 3.10.0.
