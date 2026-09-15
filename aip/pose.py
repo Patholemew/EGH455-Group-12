@@ -46,10 +46,31 @@ class PoseEstimator:
             [half, -half, 0], [-half, -half, 0],
         ], dtype=np.float64)
 
+    def camera_matrix_for(self, frame):
+        """Return intrinsics adjusted to the frame's letterboxed dimensions."""
+        if frame.ndim < 2 or frame.shape[0] <= 0 or frame.shape[1] <= 0:
+            raise ValueError("Frame must have positive width and height")
+
+        frame_width, frame_height = frame.shape[1], frame.shape[0]
+        calibration_width, calibration_height = self.image_size
+
+        scale = min(
+            frame_width / calibration_width,
+            frame_height / calibration_height,
+        )
+        padding_x = (frame_width - calibration_width * scale) / 2
+        padding_y = (frame_height - calibration_height * scale) / 2
+
+        adjusted = self.camera_matrix.astype(np.float64).copy()
+        adjusted[0, 0] *= scale
+        adjusted[1, 1] *= scale
+        adjusted[0, 2] = adjusted[0, 2] * scale + padding_x
+        adjusted[1, 2] = adjusted[1, 2] * scale + padding_y
+        return adjusted
+
     def estimate(self, frame, corners, ids):
         """Return current-frame poses; an absent marker has no entry."""
-        if (frame.shape[1], frame.shape[0]) != self.image_size:
-            raise ValueError(f"Frame size must match calibration {self.image_size}")
+        camera_matrix = self.camera_matrix_for(frame)
         if ids is None:
             return []
         poses = []
@@ -57,7 +78,7 @@ class PoseEstimator:
             ok, rvec, tvec = cv2.solvePnP(
                 self.object_points,
                 np.asarray(marker_corners, dtype=np.float64).reshape(4, 2),
-                self.camera_matrix, self.distortion,
+                camera_matrix, self.distortion,
                 flags=cv2.SOLVEPNP_IPPE_SQUARE,
             )
             if not ok or not np.isfinite(rvec).all() or not np.isfinite(tvec).all():
@@ -72,8 +93,9 @@ class PoseEstimator:
 
     def draw(self, annotated, poses):
         """Draw marker axes and camera positions onto the annotated frame."""
+        camera_matrix = self.camera_matrix_for(annotated)
         for row, pose in enumerate(poses):
-            cv2.drawFrameAxes(annotated, self.camera_matrix, self.distortion,
+            cv2.drawFrameAxes(annotated, camera_matrix, self.distortion,
                               pose.rvec, pose.tvec, self.marker_size_m / 2)
             x, y, z = pose.camera_position_m
             label = f"ID {pose.marker_id}: camera X {x:+.3f} Y {y:+.3f} Z {z:+.3f} m"

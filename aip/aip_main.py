@@ -5,6 +5,7 @@ import time
 
 import cv2
 
+from aruco import detect_aruco, draw_aruco
 from oak_detector import OakDetector
 from gauge_reader import read_gauge
 
@@ -87,7 +88,7 @@ def main():
 
                 # Raw frame for other AIP algorithms
                 frame = result["frame"]
-                
+
                 # Annotated frame for display
                 annotated_frame = result["annotated_frame"]
 
@@ -100,12 +101,21 @@ def main():
                 )
 
                 # ---------------------------------------------------------
-                # ArUco pose estimation
+                # ArUco detection
                 # ---------------------------------------------------------
 
-                # Teammate's OpenCV ArUco processing can use:
-                #
-                # aruco_pose = detect_aruco(frame)
+                # Detect ArUco markers
+                aruco_corners, aruco_ids = detect_aruco(frame)
+                
+                # ArUco Pose estimation TODO
+                
+
+                # Draw ArUco markers on the annotated frame
+                annotated_frame = draw_aruco(
+                    annotated_frame,
+                    aruco_corners,
+                    aruco_ids,
+                )
 
                 # ---------------------------------------------------------
                 # Output / debugging
@@ -141,7 +151,7 @@ def main():
                 if SHOW_DISPLAY:
                     cv2.imshow(
                         "OAK-D detections",
-                        result["annotated_frame"],
+                        annotated_frame,
                     )
 
                     if (
