@@ -12,18 +12,22 @@ from gauge_reader import process_gauge
 from pose import PoseEstimator
 from output import print_results
 from wvi_output import prepare_wvi_output
+from datetime import datetime, timezone
 
-
+# Load Object Detection Model
 MODEL = (
     Path(__file__).resolve().parent
     / "models"
     / "best_py312_14-09_1828.rvc2.tar.xz"
 )
 
+# ----------------Set parameters ------------------------------
+
 CONFIDENCE = 0.40 # Minimum confidence for object detection
 SHOW_DISPLAY = True # Whether to show the annotated frame in a window. Set to False for headless operation.
 PRINT_RESULTS = True # Whether to print detection results to the console. Set to False for headless operation.
 
+#---------------------------------------------------------
 
 def main(argv=None):
     """Run the AIP subsystem."""
@@ -39,6 +43,7 @@ def main(argv=None):
     args = parser.parse_args(argv)
     pose_estimator = PoseEstimator(args.marker_size_mm / 1000.0)
 
+    # Open OAK-D detector model and run the main loop. The detector is automatically closed when the context manager exits.
     with OakDetector(
         MODEL,
         confidence=CONFIDENCE,
@@ -53,8 +58,13 @@ def main(argv=None):
                 # ---------------------------------------------------------
                 # Run object detection
                 # ---------------------------------------------------------
-
+                
+                # Capture a frame from the OAK-D and run object detection. The result is a dictionary containing the raw frame, annotated frame, and detected gauges.
                 result = detector.read()
+
+                # Capture the current timestamp in ISO 8601 format with UTC timezone. This timestamp is used for WVI output.
+                frame_timestamp = datetime.now(timezone.utc).isoformat()
+
 
                 # Raw frame for other AIP algorithms
                 frame = result["frame"]
@@ -128,6 +138,7 @@ def main(argv=None):
                     result,
                     gauge_reading,
                     marker_poses,
+                    frame_timestamp,
                     annotated_frame,
                 )
 
