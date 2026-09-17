@@ -10,6 +10,7 @@ from aruco import detect_aruco, draw_aruco
 from oak_detector import OakDetector
 from gauge_reader import read_gauge
 from pose import PoseEstimator
+from wvi_output import prepare_wvi_output
 
 
 MODEL = (
@@ -169,6 +170,22 @@ def main(argv=None):
 
                     frame_count = 0
                     fps_start = time.monotonic()
+                    
+                # ---------------------------------------------------------
+                # Prepare output for WVI
+                # ---------------------------------------------------------
+
+                # Pack all AIP output into a dictionary and encode the annotated frame as JPEG bytes for WVI. The dictionary includes the timestamp, valve states, gauge reading, and camera positions relative to detected markers.
+                aip_data, aip_image = prepare_wvi_output(
+                    result,
+                    gauge_reading,
+                    marker_poses,
+                    annotated_frame,
+                )
+
+                # Temporary placeholders until WVI communication exists
+                SEND2SERVER = aip_data
+                IMAGE2SERVER = aip_image
 
                 # ---------------------------------------------------------
                 # Display
