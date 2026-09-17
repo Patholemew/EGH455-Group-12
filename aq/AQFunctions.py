@@ -45,7 +45,7 @@ def get_readings():
         light = 1
     
     # variable = "pressure" | unit = "hPa"
-        pressure = bme280.get_pressure()
+    pressure = bme280.get_pressure()
         
     # variables = "gases" | unit = "kO"
     gases = gas.read_all()
@@ -71,6 +71,7 @@ class readings:
     humidity_unit = "%"
     temp_unit = "°C"
     pressure_unit = "hPa"
+    start_time = time.time()
     def __init__(self):
         self.cpu_temps_record = []
         self.env_temps_record = []
@@ -93,7 +94,7 @@ class readings:
         self.light.append(light)
         self.humidity.append(humidity)
         self.pressure.append(pressure)
-        self.timestamp.append(time.time())
+        self.timestamp.append(time.time()-self.start_time)
 
 
     def recent_readings(self):
@@ -127,14 +128,14 @@ class readings:
     def print_data(self):
         """Prints most recent data to the Terminal"""
         cpu_temp, env_temp, oxidising, reducing, nh3, light, humidity, pressure, timestamp = self.recent_readings()
-        print(f'''TIME: {timestamp}\n
-        Temperature: {env_temp}{self.temp_unit}\n
-        Pressure:    {pressure}{self.pressure_unit}\n
-        Humidity:    {humidity}{self.humidity_unit}\n
-        Light:       {light}{self.light_unit}\n
-        Oxidised:    {oxidising}{self.gas_unit}\n
-        Reduced:     {reducing}{self.gas_unit}\n
-        nh3:         {nh3}{self.gas_unit}\n''')
+        print(f'''        TIME: {timestamp}\n
+        Temperature: {env_temp} {self.temp_unit}\n
+        Pressure:    {pressure} {self.pressure_unit}\n
+        Humidity:    {humidity} {self.humidity_unit}\n
+        Light:       {light} {self.light_unit}\n
+        Oxidised:    {oxidising} {self.gas_unit}\n
+        Reduced:     {reducing} {self.gas_unit}\n
+        nh3:         {nh3} {self.gas_unit}\n''')
         
 
 
