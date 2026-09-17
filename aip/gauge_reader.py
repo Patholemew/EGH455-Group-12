@@ -137,3 +137,17 @@ def read_gauge(gauge):
         "measurement": measurement,
         "valid": True,
     }
+
+
+def process_gauge(gauges):
+    """Read the first detected gauge.
+
+    Returns
+    -------
+    dict | None
+        Gauge reading dictionary, or None if no gauge is detected.
+    """
+    if not gauges:
+        return None
+
+    return read_gauge(gauges[0])
