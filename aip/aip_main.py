@@ -79,6 +79,7 @@ def print_results(result, gauge_reading, marker_poses=()):
 def main(argv=None):
     """Run the AIP subsystem."""
 
+    # Command line parser to edit marker size and other parameters. The default marker size is 200 mm.
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--marker-size-mm",

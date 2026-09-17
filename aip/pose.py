@@ -6,10 +6,10 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-
+# Path to the camera calibration file. The calibration must include a 3x3 matrix, distortion coefficients and image size.
 CALIBRATION_PATH = Path(__file__).resolve().parent.parent / "config" / "camera_intrinsics.yaml"
 
-
+# Dataclass to hold the pose of a detected marker relative to the camera.
 @dataclass
 class MarkerPose:
     marker_id: int
@@ -17,7 +17,7 @@ class MarkerPose:
     rvec: np.ndarray  # Marker-to-camera rotation, for drawing axes.
     tvec: np.ndarray  # Marker origin in camera coordinates, metres.
 
-
+# Class to estimate the camera's position relative to detected ArUco markers.
 class PoseEstimator:
     def __init__(self, marker_size_m, calibration_path=CALIBRATION_PATH):
         if not np.isfinite(marker_size_m) or marker_size_m <= 0:
@@ -46,6 +46,7 @@ class PoseEstimator:
             [half, -half, 0], [-half, -half, 0],
         ], dtype=np.float64)
 
+    # Return the camera intrinsics adjusted to the frame's dimensions, accounting for letterboxing. The returned matrix is float64.
     def camera_matrix_for(self, frame):
         """Return intrinsics adjusted to the frame's letterboxed dimensions."""
         if frame.ndim < 2 or frame.shape[0] <= 0 or frame.shape[1] <= 0:
@@ -68,6 +69,7 @@ class PoseEstimator:
         adjusted[1, 2] = adjusted[1, 2] * scale + padding_y
         return adjusted
 
+    # Estimate the camera's position relative to each detected marker. Returns a list of MarkerPose objects, one for each detected marker.
     def estimate(self, frame, corners, ids):
         """Return current-frame poses; an absent marker has no entry."""
         camera_matrix = self.camera_matrix_for(frame)
@@ -91,6 +93,7 @@ class PoseEstimator:
             poses.append(MarkerPose(int(marker_id), position, rvec, tvec))
         return poses
 
+    # Draw the marker axes and camera positions onto the annotated frame. Returns the annotated frame.
     def draw(self, annotated, poses):
         """Draw marker axes and camera positions onto the annotated frame."""
         camera_matrix = self.camera_matrix_for(annotated)
