@@ -74,7 +74,7 @@ the input frame. `draw_aruco(frame, corners, ids)` returns an annotated copy.
 
 Camera position estimation uses `config/camera_intrinsics.yaml` and a default
 marker side length of **200 mm**, measured across the outer black square and
-excluding the white margin. Override the size when starting AIP:
+excluding the white margin. If you want to override the marker size (e.g. to 150mm) when starting AIP, run:
 
 ```bash
 python3 aip/aip_main.py --marker-size-mm 150
