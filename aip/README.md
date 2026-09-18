@@ -1,54 +1,194 @@
 # AIP Subsystem
 
-Run the subsystem entry point from the repository root:
+The Autonomous Inspection Payload (AIP) uses an OAK-D Lite to detect gauges
+and valves, read an analogue gauge, detect ArUco markers, and estimate the
+camera position relative to each marker. It produces structured results and an
+annotated JPEG frame for future integration with WVI.
+
+## Running AIP
+
+Run the entry point from the repository root:
 
 ```bash
 python3 aip/aip_main.py
 ```
 
-`aip_main.py` captures frames from the OAK-D Lite using `OakDetector`, reads
-gauges and valves, and displays ArUco outlines and camera pose estimates.
-Requires a connected camera, DepthAI v3, OpenCV (`cv2`)
-with GUI support, `gpiozero`, and a graphical desktop session. The drill servo
-must be connected to BCM GPIO 12.
+The program requires:
 
-Set `DRILL_THRESHOLD` in `aip_main.py` to the required gauge measurement. A valid
-measurement crossing above the threshold starts one drill-and-return cycle while
-camera processing continues. The trigger rearms only after a valid measurement
-returns to or below the threshold. Missing and invalid gauge readings do not
-trigger or rearm drilling, and overlapping cycles are prevented.
+- an OAK-D Lite connected to the host;
+- DepthAI v3;
+- NumPy; and
+- OpenCV with `cv2.aruco.ArucoDetector` support and, while `SHOW_DISPLAY` is
+  enabled, GUI support and a graphical desktop session.
 
-Press **Q** in the frame window, or **Ctrl+C** in the terminal, to
+Press lowercase **q** in the display window, or **Ctrl+C** in the terminal, to
 stop capture and close the display.
 
-`aruco.py` detects markers and overlays their outlines and IDs in the live
-display. It defaults to `cv2.aruco.DICT_5X5_50`; change `ARUCO_DICTIONARY` in
-`aruco.py` to match your printed markers. It requires OpenCV with
-`cv2.aruco.ArucoDetector` support (available in the project's OpenCV 4.13).
-The `detect_aruco(frame)` function returns `(corners, ids)` for other processing
-code, with `ids=None` when no markers are found. The input frame is preserved.
-`draw_aruco(frame, corners, ids)` returns an annotated copy. `aip_main.py` handles
-pose estimation, the window, quit keys, and window cleanup. Camera positions
-are also printed alongside gauge and valve results when `PRINT_RESULTS` is enabled.
+The main runtime settings are constants near the top of `aip_main.py`:
 
-Camera position estimation uses `config/camera_intrinsics.yaml` and a **200 mm**
-marker side length (outer black square, excluding the white margin). Override
-the size for other markers with `--marker-size-mm 150`. All markers in a frame
-must have the configured physical size.
+| Setting | Current value | Purpose |
+| --- | --- | --- |
+| `MODEL` | `aip/models/best_py312_14-09_1828.rvc2.tar.xz` | DepthAI neural-network archive |
+| `CONFIDENCE` | `0.40` | Minimum object-detection confidence |
+| `SHOW_DISPLAY` | `True` | Show the annotated OpenCV window |
+| `PRINT_RESULTS` | `True` | Print detections and measured FPS |
 
-The display shows each ID and the camera position in metres relative to that
-marker's centre: +X points right, +Y up, and +Z out of the printed face, with
-the marker viewed upright. Drawn axes are red X, green Y, and blue Z. Each
-marker defines its own coordinate frame; these are not global coordinates.
+`OakDetector` requests a letterboxed BGR camera stream at the model's input
+resolution and 30 FPS. It uses the labels embedded in the model archive, or
+the fallback labels in `oak_detector.py` when the archive has none.
 
-`PoseEstimator.estimate(frame, corners, ids)` returns `MarkerPose` entries with
-`marker_id` and `camera_position_m` (X, Y, Z). It also retains the marker-to-camera
-`rvec` and `tvec` used to draw axes. Camera position is computed by inverting
-that transform: `-R.T @ tvec`. Missing markers produce no entry; old positions
-are not retained. Intrinsics are adjusted from the calibration's 1280 x 720
-resolution to the detector's letterboxed frame dimensions.
+## Object detection and gauge reading
 
-This is a per-frame estimate. Small or nearly face-on markers can give noisy
-or ambiguous poses; verify distances with the physical setup before using
-them for control. Run `python3 aip/get_camera_intrinsics.py` with the camera
-connected to refresh the YAML calibration.
+The detector recognises `Blue Gauge`, `Plain Gauge`, `Gauge Centre`, `Needle
+Tip`, `Open Valve`, and `Closed Valve`. Its YOLO `ArUco` class is ignored
+because OpenCV performs marker detection separately.
+
+Only one physical gauge is expected. If YOLO returns multiple gauge boxes, AIP
+keeps the largest and associates the highest-confidence centre and needle-tip
+detections contained within it. `process_gauge()` then reads that gauge. The
+reading is invalid when either point is missing.
+
+Gauge angles use this convention:
+
+| Needle direction | Angle |
+| --- | ---: |
+| Bottom | 0 degrees |
+| Left | 90 degrees |
+| Top | 180 degrees |
+| Right | 270 degrees |
+
+`gauge_reader.py` converts the angle to a measurement using separate linear
+calibrations for `Blue Gauge` and `Plain Gauge`. The result has no unit encoded
+in the current data structure. These calibration equations should be verified
+against the physical gauges before the values are used operationally.
+
+Every detected valve is retained with its model label, bounding-box centre,
+bounding box, and confidence. The WVI output uses only its label and centre.
+
+## ArUco detection and pose
+
+`aruco.py` uses `cv2.aruco.DICT_5X5_50`. `ARUCO_DICTIONARY` must match the
+dictionary used to print the physical markers. `detect_aruco(frame)` returns
+`(corners, ids)`, with `ids=None` when no markers are found, without modifying
+the input frame. `draw_aruco(frame, corners, ids)` returns an annotated copy.
+
+Camera position estimation uses `config/camera_intrinsics.yaml` and a default
+marker side length of **200 mm**, measured across the outer black square and
+excluding the white margin. Override the size when starting AIP:
+
+```bash
+python3 aip/aip_main.py --marker-size-mm 150
+```
+
+All markers visible in a frame must have the configured physical size. The
+argument must be a positive, finite number.
+
+The display shows each marker ID and the camera position in metres relative to
+that marker's centre. With the marker viewed upright, +X points right, +Y
+points up, and +Z points out of the printed face. Drawn axes are red X, green
+Y, and blue Z. Each marker defines an independent coordinate frame; these are
+not global coordinates.
+
+`PoseEstimator.estimate(frame, corners, ids)` returns one `MarkerPose` for each
+successfully solved marker. Each entry contains `marker_id`,
+`camera_position_m`, and the marker-to-camera `rvec` and `tvec` used to draw
+the axes. Camera position is calculated by inverting that transform:
+`-R.T @ tvec`. Failed or non-finite pose solutions are omitted, and positions
+from previous frames are not retained.
+
+The stored calibration is for CAM_A at 1280 x 720. AIP scales its intrinsic
+matrix and offsets its principal point for the detector's letterboxed frame.
+Refresh the calibration from the connected camera with:
+
+```bash
+python3 aip/get_camera_intrinsics.py
+```
+
+This overwrites `config/camera_intrinsics.yaml` with CAM_A's intrinsic matrix
+and distortion coefficients. Pose is a per-frame estimate; small or nearly
+face-on markers can produce noisy or ambiguous results, so verify estimated
+distances with the physical setup before using them for control.
+
+## WVI output
+
+For every camera frame, `aip_main.py` calls `prepare_wvi_output()` from
+`wvi_output.py`. It returns two values:
+
+| Value | Python type | Contents |
+| --- | --- | --- |
+| `aip_data` | `dict` | Timestamp and the valve, gauge, and ArUco results for the frame |
+| `aip_image` | `bytes` or `None` | Annotated frame encoded as JPEG, or `None` if encoding fails |
+
+The metadata dictionary has this structure:
+
+```text
+{
+    "timestamp": str,                   # ISO 8601 UTC timestamp
+    "valves": [
+        {
+            "state": str,               # "Open Valve" or "Closed Valve"
+            "centre_px": (float, float) # (x, y) image coordinates
+        }
+    ],
+    "gauge": None | {
+        "type": str,                    # "Blue Gauge" or "Plain Gauge"
+        "valid": bool,
+        "angle": float | None,          # degrees
+        "measurement": float | None
+    },
+    "aruco": [
+        {
+            "id": int,
+            "camera_position_m": {
+                "x": float,
+                "y": float,
+                "z": float
+            }
+        }
+    ]
+}
+```
+
+Example metadata after conversion to JSON-compatible values:
+
+```json
+{
+  "timestamp": "2026-09-18T04:15:30.123456+00:00",
+  "valves": [
+    {"state": "Open Valve", "centre_px": [612.0, 348.0]}
+  ],
+  "gauge": {
+    "type": "Blue Gauge",
+    "valid": true,
+    "angle": 225.4,
+    "measurement": 6.6
+  },
+  "aruco": [
+    {
+      "id": 7,
+      "camera_position_m": {"x": 0.12, "y": -0.04, "z": 1.31}
+    }
+  ]
+}
+```
+
+An empty `valves` or `aruco` list means none were detected in that frame. If
+no gauge is detected, `gauge` is `None` (`null` in JSON). A detected gauge can
+instead have `valid: false`, with `angle` and `measurement` set to `None`, when
+its centre or needle tip cannot be determined.
+
+### How it is sent to WVI
+
+The output is currently prepared but not transmitted. In `aip_main.py`,
+`aip_data` is assigned to the temporary `SEND2SERVER` placeholder and the JPEG
+bytes are assigned to `IMAGE2SERVER`. There is currently no network connection,
+serialisation step, or receiving implementation in `wvi/wvi_main.py`.
+
+The future WVI transport must send both outputs as parts of the same frame:
+
+1. Convert `aip_data` to structured metadata such as JSON, including conversion
+   of tuples and NumPy scalar values to JSON-compatible values.
+2. Send `aip_image` as a binary JPEG payload associated with that metadata.
+
+The network protocol, endpoint, message framing, and retry behaviour have not
+yet been defined.
