@@ -2,11 +2,18 @@
 
 import argparse
 from pathlib import Path
+import sys
+from threading import Thread
 import time
 
 import cv2
 
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
 from aruco import detect_aruco, draw_aruco
+from de.de_main import main as run_drill
 from oak_detector import OakDetector
 from gauge_reader import process_gauge
 from pose import PoseEstimator
@@ -24,6 +31,7 @@ MODEL = (
 # ----------------Set parameters ------------------------------
 
 CONFIDENCE = 0.40 # Minimum confidence for object detection
+DRILL_THRESHOLD = 5.0 # Gauge measurement above which drilling starts
 SHOW_DISPLAY = True # Whether to show the annotated frame in a window. Set to False for headless operation.
 PRINT_RESULTS = True # Whether to print detection results to the console. Set to False for headless operation.
 
@@ -51,6 +59,8 @@ def main(argv=None):
 
         frame_count = 0
         fps_start = time.monotonic()
+        drill_thread = None
+        drill_trigger_armed = True
 
         try:
             while True:
@@ -79,6 +89,33 @@ def main(argv=None):
                 gauge_reading = process_gauge(
                     result["gauges"]
                 )
+
+                #---------------------------------------------------------
+                # Drill trigger logic
+                #---------------------------------------------------------
+
+                measurement = None
+                if (
+                    gauge_reading is not None
+                    and gauge_reading["valid"]
+                ):
+                    measurement = gauge_reading["measurement"]
+
+                if measurement is not None:
+                    if measurement <= DRILL_THRESHOLD:
+                        drill_trigger_armed = True
+                    elif drill_trigger_armed:
+                        if (
+                            drill_thread is None
+                            or not drill_thread.is_alive()
+                        ):
+                            drill_thread = Thread(
+                                target=run_drill,
+                                name="drill-cycle",
+                            )
+                            drill_thread.start()
+
+                        drill_trigger_armed = False
 
                 # ---------------------------------------------------------
                 # ArUco detection
@@ -156,16 +193,18 @@ def main(argv=None):
                         annotated_frame,
                     )
 
-                    if (
-                        cv2.waitKey(1) & 0xFF
-                        == ord("q")
-                    ):
+                    if cv2.waitKey(1) & 0xFF == ord("q"):
                         break
 
         except KeyboardInterrupt:
             pass
 
         finally:
+            # Clean up resources and close the OAK-D detector.
+            # If a drill cycle is running, wait for it to finish before exiting.
+            if drill_thread is not None:
+                drill_thread.join()
+
             cv2.destroyAllWindows()
 
 
