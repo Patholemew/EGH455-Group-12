@@ -112,7 +112,6 @@ def main(argv=None):
                                 target=run_drill,
                                 name="drill-cycle",
                             )
-                            print("Starting drill cycle...")
                             drill_thread.start()
 
                         drill_trigger_armed = False
