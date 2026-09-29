@@ -9,7 +9,14 @@ python3 aip/aip_main.py
 `aip_main.py` captures frames from the OAK-D Lite using `OakDetector`, reads
 gauges and valves, and displays ArUco outlines and camera pose estimates.
 Requires a connected camera, DepthAI v3, OpenCV (`cv2`)
-with GUI support, and a graphical desktop session.
+with GUI support, `gpiozero`, and a graphical desktop session. The drill servo
+must be connected to BCM GPIO 12.
+
+Set `DRILL_THRESHOLD` in `aip_main.py` to the required gauge measurement. A valid
+measurement crossing above the threshold starts one drill-and-return cycle while
+camera processing continues. The trigger rearms only after a valid measurement
+returns to or below the threshold. Missing and invalid gauge readings do not
+trigger or rearm drilling, and overlapping cycles are prevented.
 
 Press **Q** in the frame window, or **Ctrl+C** in the terminal, to
 stop capture and close the display.
