@@ -1,41 +1,173 @@
 """Entry point for the AIP subsystem."""
+
+import argparse
+from pathlib import Path
 import time
-from datetime import datetime, timezone
 
 import cv2
-import depthai as dai
 
-from wvi_client import publish_live_frame
+from aruco import detect_aruco, draw_aruco
+from oak_detector import OakDetector
+from gauge_reader import process_gauge
+from pose import PoseEstimator
+from output import print_results
+from wvi_output import prepare_wvi_output
+from datetime import datetime, timezone
+
+# Load Object Detection Model
+MODEL = (
+    Path(__file__).resolve().parent
+    / "models"
+    / "best_py312_14-09_1828.rvc2.tar.xz"
+)
+
+# ----------------Set parameters ------------------------------
+
+CONFIDENCE = 0.40 # Minimum confidence for object detection
+SHOW_DISPLAY = True # Whether to show the annotated frame in a window. Set to False for headless operation.
+PRINT_RESULTS = True # Whether to print detection results to the console. Set to False for headless operation.
+
+#---------------------------------------------------------
+
+def main(argv=None):
+    """Run the AIP subsystem."""
+
+    # Command line parser to edit marker size and other parameters. The default marker size is 200 mm.
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--marker-size-mm",
+        type=float,
+        default=200.0,
+        help="Marker side length excluding the white margin, in mm (default: 200)",
+    )
+    args = parser.parse_args(argv)
+    pose_estimator = PoseEstimator(args.marker_size_mm / 1000.0)
+
+    # Open OAK-D detector model and run the main loop. The detector is automatically closed when the context manager exits.
+    with OakDetector(
+        MODEL,
+        confidence=CONFIDENCE,
+    ) as detector:
+
+        frame_count = 0
+        fps_start = time.monotonic()
+
+        try:
+            while True:
+
+                # ---------------------------------------------------------
+                # Run object detection
+                # ---------------------------------------------------------
+                
+                # Capture a frame from the OAK-D and run object detection. The result is a dictionary containing the raw frame, annotated frame, and detected gauges.
+                result = detector.read()
+
+                # Capture the current timestamp in ISO 8601 format with UTC timezone. This timestamp is used for WVI output.
+                frame_timestamp = datetime.now(timezone.utc).isoformat()
 
 
-def main():
-    pipeline = dai.Pipeline()
-    camRgb = pipeline.create(dai.node.ColorCamera)
-    camRgb.setBoardSocket(dai.CameraBoardSocket.CAM_A)
-    camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
-    camRgb.setVideoSize(960, 540)
+                # Raw frame for other AIP algorithms
+                frame = result["frame"]
 
-    xout = pipeline.create(dai.node.XLinkOut)
-    xout.setStreamName("rgb")
-    camRgb.video.link(xout.input)
+                # Annotated frame for display
+                annotated_frame = result["annotated_frame"]
 
-    with dai.Device(pipeline) as device:
-        queue = device.getOutputQueue("rgb", maxSize=4, blocking=False)
-        frame_id = 0
-        while True:
-            tick = time.monotonic()
-            packet = queue.get()
-            ok, buffer = cv2.imencode(".jpg", packet.getCvFrame(),
-                                      [int(cv2.IMWRITE_JPEG_QUALITY), 75])
-            if ok:
-                publish_live_frame(buffer.tobytes(), frame_id,
-                                   datetime.now(timezone.utc).isoformat())
-                frame_id += 1
-            time.sleep(max(0, 0.1 - (time.monotonic() - tick)))
+                # ---------------------------------------------------------
+                # Gauge processing
+                # ---------------------------------------------------------
+
+                gauge_reading = process_gauge(
+                    result["gauges"]
+                )
+
+                # ---------------------------------------------------------
+                # ArUco detection
+                # ---------------------------------------------------------
+
+                # Detect ArUco markers
+                aruco_corners, aruco_ids = detect_aruco(frame)
+                
+                marker_poses = pose_estimator.estimate(
+                    frame, aruco_corners, aruco_ids,
+                )
+
+                # Draw ArUco markers on the annotated frame
+                annotated_frame = draw_aruco(
+                    annotated_frame,
+                    aruco_corners,
+                    aruco_ids,
+                )
+                annotated_frame = pose_estimator.draw(
+                    annotated_frame, marker_poses,
+                )
+
+                # ---------------------------------------------------------
+                # Output / debugging
+                # ---------------------------------------------------------
+
+                if PRINT_RESULTS:
+                    print_results(
+                        result,
+                        gauge_reading,
+                        marker_poses,
+                    )
+
+                # ---------------------------------------------------------
+                # FPS
+                # ---------------------------------------------------------
+
+                frame_count += 1
+                elapsed = time.monotonic() - fps_start
+
+                if elapsed >= 1.0:
+                    if PRINT_RESULTS:
+                        print(
+                            f"FPS: "
+                            f"{frame_count / elapsed:.1f}"
+                        )
+
+                    frame_count = 0
+                    fps_start = time.monotonic()
+                    
+                # ---------------------------------------------------------
+                # Prepare output for WVI
+                # ---------------------------------------------------------
+
+                # Pack all AIP output into a dictionary and encode the annotated frame as JPEG bytes for WVI. The dictionary includes the timestamp, valve states, gauge reading, and camera positions relative to detected markers.
+                aip_data, aip_image = prepare_wvi_output(
+                    result,
+                    gauge_reading,
+                    marker_poses,
+                    frame_timestamp,
+                    annotated_frame,
+                )
+
+                # Temporary placeholders until WVI communication exists
+                SEND2SERVER = aip_data
+                IMAGE2SERVER = aip_image
+
+                # ---------------------------------------------------------
+                # Display
+                # ---------------------------------------------------------
+
+                if SHOW_DISPLAY:
+                    cv2.imshow(
+                        "OAK-D detections",
+                        annotated_frame,
+                    )
+
+                    if (
+                        cv2.waitKey(1) & 0xFF
+                        == ord("q")
+                    ):
+                        break
+
+        except KeyboardInterrupt:
+            pass
+
+        finally:
+            cv2.destroyAllWindows()
 
 
 if __name__ == "__main__":
-    try:
-        main()
-    except KeyboardInterrupt:
-        print("AIP stopped.")
+    main()
