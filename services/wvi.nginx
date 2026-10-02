@@ -3,7 +3,7 @@ server {
     server_name _;
 
     location /static/ {
-        alias /opt/uav-wvi/static/;
+        alias /home/egh455-g12/EGH455-Group-12/wvi/static/;
     }
 
     location = /live.jpg {
