@@ -5,7 +5,6 @@ import depthai as dai
 
 
 FALLBACK_LABELS = [
-    "ArUco",
     "Blue Gauge",
     "Closed Valve",
     "Gauge Centre",
