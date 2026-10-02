@@ -18,8 +18,6 @@ from smbus2 import SMBus
 "systemctl status display_ip.service" to check
 '''
 
-
-
 bus = SMBus(1)				#for temperature readings
 bme280 = BME280(i2c_dev=bus)
 
@@ -52,34 +50,15 @@ disp.begin()
 WIDTH = disp.width
 HEIGHT = disp.height
 
-pipeline = dai.Pipeline()
-# Define source and output
-camRgb = pipeline.create(dai.node.Camera)
-camRgb.build()
-
-# Properties
-cameraOutput = camRgb.requestOutput(
-	size=(300, 300),
-	type = dai.ImgFrame.Type.RGB888p
-	)
-	
-# Set font
+FRAME_PATH = "/dev/shm/uav/liveimage.jpg"
 font = ImageFont.load_default()
 
-# Connect to device and start pipeline
-previewQueue = cameraOutput.createOutputQueue(maxSize=4, blocking=False)
-pipeline.start()
-while pipeline.isRunning():
-	#~~~CAMERA RELATED~~~#
-	inFrame = previewQueue.get()
-	frame = inFrame.getCvFrame()
-	inRgb = previewQueue.get()
-	img=inRgb.getCvFrame()
-	img=cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-	im_pil = Image.fromarray(img)
-	# Resize the image
-	im_pil = im_pil.resize((WIDTH, HEIGHT))
-	
+while True:
+	try:
+		im_pil = Image.open(FRAME_PATH).convert("RGB").resize((WIDTH, HEIGHT))
+	except (OSError, ValueError):
+		im_pil = Image.new("RGB", (WIDTH, HEIGHT), (0, 0, 0))
+
 	#~~~~IP ADDRESS~~~~#	
 	# Check IP address
 	try:
@@ -108,6 +87,7 @@ while pipeline.isRunning():
 	
 	# Display image on lcd
 	disp.display(im_pil)
+	time.sleep(0.2)
 	
 	
 	
