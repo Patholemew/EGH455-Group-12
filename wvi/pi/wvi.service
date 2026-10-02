@@ -1,0 +1,14 @@
+[Unit]
+Description=WVI web application (Gunicorn)
+After=network.target
+
+[Service]
+User=PI_USER
+WorkingDirectory=/opt/uav-wvi
+Environment="WVI_DATA_DIR=/var/lib/uav-wvi"
+Environment="WVI_FRAME_FILE=/dev/shm/uav/liveimage.jpg"
+ExecStart=/opt/uav-wvi/.venv/bin/gunicorn --workers 3 --bind 127.0.0.1:8000 wvi_main:app
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
