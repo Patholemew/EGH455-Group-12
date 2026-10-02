@@ -1,16 +1,23 @@
 # DE Subsystem
 
-Run the subsystem entry point from the repository root:
+Install the Raspberry Pi GPIO packages, then allow the project virtual
+environment to use system packages. Run from the repository root:
 
 ```bash
-python3 de/de_main.py
+sudo apt install python3-gpiozero python3-lgpio
+python3 -m venv --system-site-packages .venv
 ```
 
-Install the GPIO dependency on the Raspberry Pi if needed:
+Run the subsystem with that same environment:
 
 ```bash
-sudo apt install python3-gpiozero
+.venv/bin/python de/de_main.py
 ```
+
+Alternatively, run `/usr/bin/python3 de/de_main.py` using system Python.
+In an editor, select `.venv/bin/python` as the interpreter. An isolated virtual
+environment cannot see packages installed by `apt` unless system site packages
+are enabled as above.
 
 `de_main.py` controls a servo connected to BCM GPIO 12. It runs the servo in the
 drilling direction for 10 seconds, pauses for 0.5 seconds, and runs it in the

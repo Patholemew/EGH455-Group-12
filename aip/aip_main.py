@@ -31,7 +31,7 @@ MODEL = (
 # ----------------Set parameters ------------------------------
 
 CONFIDENCE = 0.40 # Minimum confidence for object detection
-DRILL_THRESHOLD = 5.0 # Gauge measurement above which drilling starts
+DRILL_THRESHOLD = 2.0 # Gauge measurement below which drilling starts
 SHOW_DISPLAY = True # Whether to show the annotated frame in a window. Set to False for headless operation.
 PRINT_RESULTS = True # Whether to print detection results to the console. Set to False for headless operation.
 
@@ -113,6 +113,7 @@ def main(argv=None):
                                 target=run_drill,
                                 name="drill-cycle",
                             )
+                            print("Starting drill cycle...")
                             drill_thread.start()
 
                         drill_trigger_armed = False
