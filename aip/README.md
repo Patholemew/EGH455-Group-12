@@ -13,9 +13,6 @@ Run the entry point from the repository root:
 python3 aip/aip_main.py
 ```
 
-<<<<<<< HEAD
-The program requires:
-=======
 `aip_main.py` captures frames from the OAK-D Lite using `OakDetector`, reads
 gauges and valves, and displays ArUco outlines and camera pose estimates.
 Requires a connected camera, DepthAI v3, OpenCV (`cv2`)
@@ -27,7 +24,6 @@ measurement crossing above the threshold starts one drill-and-return cycle while
 camera processing continues. The trigger rearms only after a valid measurement
 returns to or below the threshold. Missing and invalid gauge readings do not
 trigger or rearm drilling, and overlapping cycles are prevented.
->>>>>>> 1fac81c (Drill trigger logic in aip main)
 
 - an OAK-D Lite connected to the host;
 - DepthAI v3;
