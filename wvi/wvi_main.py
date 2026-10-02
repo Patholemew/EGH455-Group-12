@@ -9,9 +9,9 @@ import re
 from werkzeug.exceptions import HTTPException
 
 app = Flask(__name__)
-DATA = Path(os.environ.get("WVI_DATA_DIR", str(Path(__file__).resolve().parent / "data")))
+DATA = Path(os.environ.get("APP_DATA_DIR", str(Path(__file__).resolve().parent / "data")))
 DATABASE = DATA / "wvi.sqlite3"
-FRAME = Path(os.environ.get("WVI_FRAME_FILE", str(DATA / "liveimage.jpg")))
+FRAME = Path(os.environ.get("APP_FRAME_FILE", str(DATA / "liveimage.jpg")))
 FRAME_META = FRAME.with_suffix(".json")
 SNAPSHOTS = DATA / "snapshots"
 HEARTBEAT_MESSAGE = "Heartbeat: API responded"
@@ -195,17 +195,37 @@ def video_status(now):
 @app.get("/api/data")
 def current_data():
     now = time.time()
-    with closing(connect()) as con:
-        row = con.execute("""
+    with closing(connect()) as db:
+        air_row = db.execute("""
             SELECT * FROM air_readings
             ORDER BY captured_at DESC, id DESC
             LIMIT 1
         """).fetchone()
-    air = dict(row) if row else None
-    if air:
+        target_rows = db.execute("""
+            SELECT * FROM detections
+            WHERE id IN (
+                SELECT MAX(id) FROM detections GROUP BY type
+            )
+            ORDER BY type
+        """).fetchall()
+    air = None
+    if air_row:
+        air = dict(air_row)
         air["age_seconds"] = now - air["captured_at"]
-        air["stale"] = air["age_seconds"] > 4 
-    return jsonify(server_time=now, air=air, video=video_status(now))
+        air["stale"] = air["age_seconds"] > 4
+    targets = []
+    for row in target_rows:
+        target = dict(row)
+        target["age_seconds"] = now - target["captured_at"]
+        target["stale"] = target["age_seconds"] > 4
+        targets.append(target)
+
+    return jsonify(
+        server_time=now,
+        air=air,
+        video=video_status(now),
+        targets=targets
+    )
 
 @app.get("/api/history")
 def history():

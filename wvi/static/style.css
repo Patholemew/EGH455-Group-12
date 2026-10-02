@@ -67,3 +67,5 @@ th { font-size: 13px; color: #5a6b7a; }
 
 #live-video { display: block; width: 100%; max-width: 640px; background: #102536; }
 .thumb { display: block; width: 120px; height: auto; border-radius: 3px; }
+#current-targets strong { font-size: 16px; font-weight: 600; }
+#current-targets .reading.stale { opacity: 0.55; }

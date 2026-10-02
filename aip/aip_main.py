@@ -3,7 +3,7 @@
 import argparse
 from pathlib import Path
 import time
-
+import os
 import cv2
 
 from aruco import detect_aruco, draw_aruco
@@ -12,6 +12,7 @@ from gauge_reader import process_gauge
 from pose import PoseEstimator
 from output import print_results
 from wvi_output import prepare_wvi_output
+from wvi_client import send_aip_output
 from datetime import datetime, timezone
 
 # Load Object Detection Model
@@ -24,9 +25,8 @@ MODEL = (
 # ----------------Set parameters ------------------------------
 
 CONFIDENCE = 0.40 # Minimum confidence for object detection
-SHOW_DISPLAY = True # Whether to show the annotated frame in a window. Set to False for headless operation.
+SHOW_DISPLAY = bool(os.environ.get("DISPLAY")) # Whether to show the annotated frame in a window. Set to False for headless operation.
 PRINT_RESULTS = True # Whether to print detection results to the console. Set to False for headless operation.
-
 #---------------------------------------------------------
 
 def main(argv=None):
@@ -143,8 +143,10 @@ def main(argv=None):
                 )
 
                 # Temporary placeholders until WVI communication exists
-                SEND2SERVER = aip_data
-                IMAGE2SERVER = aip_image
+                try:
+                    send_aip_output(aip_data, aip_image)
+                except:
+                    print(f"WVI output failure")
 
                 # ---------------------------------------------------------
                 # Display
@@ -166,7 +168,8 @@ def main(argv=None):
             pass
 
         finally:
-            cv2.destroyAllWindows()
+            if SHOW_DISPLAY:
+                cv2.destroyAllWindows()
 
 
 if __name__ == "__main__":

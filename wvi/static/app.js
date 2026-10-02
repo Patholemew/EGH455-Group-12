@@ -33,7 +33,9 @@ async function refresh() {
       : video.age_seconds === null ? "No timestamp"
       : video.stale ? "Stale" : "Receiving",
     video.stale ? "stale" : "live");
-
+  
+  showTargets(data.targets);
+  
   if (!data.air) {
     setBadge("air-state", "Waiting", "");
     return;
@@ -133,16 +135,6 @@ if (page === "charts") {
 
 if (page === "targets") {
   let filter = "all";
-
-  function describe(row) {
-    if (row.type === "valve") {
-      return "Valve (" + row.valve_state + ")";
-    }
-    if (row.type === "gauge") {
-      return "Gauge (" + row.gauge_reading + " " + row.gauge_unit + ")";
-    }
-    return "ArUco (ID " + row.marker_id + ") · x " + row.x + ", y " + row.y + ", z " + row.z + " m";
-  }
 
   function cell(text) {
     const td = document.createElement("td");

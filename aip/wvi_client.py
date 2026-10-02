@@ -37,3 +37,70 @@ def post_detection(payload):
                       headers={"Content-Type": "application/json"}, method="POST")
     with urlopen(request, timeout=2) as response:
         return response.status
+
+last_sent = 0.0
+frame_id = 0
+
+VALVE_STATES = {"Open Valve": "open", "Closed Valve": "closed"}
+
+
+def send_aip_output(aip_data, aip_image):
+    global last_sent, frame_id
+
+    now = time.monotonic()
+    if now - last_sent < 0.1:
+        return
+    last_sent = now
+
+    timestamp = aip_data["timestamp"]
+
+    if aip_image is not None:
+        publish_live_frame(aip_image, frame_id, timestamp)
+        frame_id += 1
+
+    detections = []
+
+    for number, valve in enumerate(aip_data["valves"], start=1):
+        detections.append({
+            "event_id": f"valve-{number}",
+            "type": "valve",
+            "state": VALVE_STATES.get(valve["state"], "unknown")
+        })
+
+    gauge = aip_data["gauge"]
+    if gauge is not None and gauge["valid"] and gauge["measurement"] is not None:
+        detections.append({
+            "event_id": "gauge-1",
+            "type": "gauge",
+            "reading": float(gauge["measurement"]),
+            "unit": "UNIT"
+        })
+
+    for marker in aip_data["aruco"]:
+        position = marker["camera_position_m"]
+        detections.append({
+            "event_id": f"aruco-{marker['id']}",
+            "type": "aruco",
+            "marker_id": int(marker["id"]),
+            "position_m": {
+                "x": float(position["x"]),
+                "y": float(position["y"]),
+                "z": float(position["z"])
+            },
+            "coordinate_frame": "camera position in marker frame (m)"
+        })
+
+    for detection in detections:
+        filename = None
+        if aip_image is not None:
+            filename = detection["event_id"] + ".jpg"
+            save_capture(aip_image, filename)
+
+        detection["captured_at"] = timestamp
+        detection["confidence"] = None
+        detection["image_filename"] = filename
+
+        try:
+            post_detection(detection)
+        except Exception as error:
+            print(f"WVI post failed: {error}", flush=True)
