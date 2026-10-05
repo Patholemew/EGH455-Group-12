@@ -25,7 +25,7 @@ from datetime import datetime, timezone
 MODEL = (
     Path(__file__).resolve().parent
     / "models"
-    / "best_01-10.rvc2.tar.xz"
+    / "best_04-10_epoch194.rvc2.tar.xz"
 )
 
 # ----------------Set parameters ------------------------------
