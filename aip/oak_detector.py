@@ -8,7 +8,7 @@ FALLBACK_LABELS = [
     "Blue Gauge",
     "Closed Valve",
     "Gauge Centre",
-    "Needle Tip",
+    "Needle",
     "Open Valve",
     "Plain Gauge",
 ]
@@ -49,7 +49,7 @@ class OakDetector:
     Handles:
     - Blue / Plain gauges
     - Gauge centres
-    - Needle tips
+    - Needles
     - Open / Closed valves
 
     Returns both:
@@ -218,10 +218,10 @@ class OakDetector:
         self,
         gauge_detections,
         centre_detections,
-        tip_detections,
+        needle_detections,
     ):
         """
-        Associate Gauge Centre and Needle Tip detections with
+        Associate Gauge Centre and Needle detections with
         the gauge bounding box that contains them.
         """
 
@@ -239,8 +239,8 @@ class OakDetector:
                 "confidence": detection["confidence"],
                 "centre": None,
                 "centre_confidence": None,
-                "needle_tip": None,
-                "needle_tip_confidence": None,
+                "needle": None,
+                "needle_confidence": None,
             })
 
         # -------------------------------------------------------------
@@ -283,10 +283,10 @@ class OakDetector:
                     )
 
         # -------------------------------------------------------------
-        # Associate needle tip detections
+        # Associate needle detections
         # -------------------------------------------------------------
 
-        for detection in tip_detections:
+        for detection in needle_detections:
 
             point = detection["centre"]
 
@@ -308,16 +308,16 @@ class OakDetector:
                     ),
                 )
 
-                # Keep highest confidence tip.
+                # Keep highest confidence needle.
                 if (
-                    gauge["needle_tip_confidence"]
+                    gauge["needle_confidence"]
                     is None
                     or detection["confidence"]
-                    > gauge["needle_tip_confidence"]
+                    > gauge["needle_confidence"]
                 ):
-                    gauge["needle_tip"] = point
+                    gauge["needle"] = point
 
-                    gauge["needle_tip_confidence"] = (
+                    gauge["needle_confidence"] = (
                         detection["confidence"]
                     )
 
@@ -366,7 +366,7 @@ class OakDetector:
         # Mark bounding-box centre for important point classes.
         if label in (
             "Gauge Centre",
-            "Needle Tip",
+            "Needle",
         ):
 
             x, y = detection["centre"]
@@ -444,9 +444,9 @@ class OakDetector:
             if d["label"] == "Gauge Centre"
         ]
 
-        tip_detections = [
+        needle_detections = [
             d for d in detections
-            if d["label"] == "Needle Tip"
+            if d["label"] == "Needle"
         ]
 
         valve_detections = [
@@ -464,7 +464,7 @@ class OakDetector:
         gauges = self._associate_gauges(
             gauge_detections,
             centre_detections,
-            tip_detections,
+            needle_detections,
         )
 
         # -------------------------------------------------------------

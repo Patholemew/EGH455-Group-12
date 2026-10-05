@@ -1,9 +1,9 @@
 import math
 
 
-def calculate_angle(gauge_centre, needle_tip):
+def calculate_angle(gauge_centre, needle):
     """
-    Calculate needle angle from gauge centre and needle tip.
+    Calculate needle angle from gauge centre and needle.
 
     Angle convention:
         0 deg   = bottom
@@ -16,8 +16,8 @@ def calculate_angle(gauge_centre, needle_tip):
     gauge_centre : tuple
         (x, y) pixel coordinates of the gauge centre.
 
-    needle_tip : tuple
-        (x, y) pixel coordinates of the needle tip.
+    needle : tuple
+        (x, y) pixel coordinates of the needle.
 
     Returns
     -------
@@ -25,14 +25,14 @@ def calculate_angle(gauge_centre, needle_tip):
         Needle angle in degrees from 0 to <360.
     """
 
-    if gauge_centre is None or needle_tip is None:
+    if gauge_centre is None or needle is None:
         return None
 
     centre_x, centre_y = gauge_centre
-    tip_x, tip_y = needle_tip
+    needle_x, needle_y = needle
 
-    dx = tip_x - centre_x
-    dy = tip_y - centre_y
+    dx = needle_x - centre_x
+    dy = needle_y - centre_y
 
     # Image coordinates have +y pointing downwards.
     #
@@ -99,21 +99,21 @@ def read_gauge(gauge):
     Returns
     -------
     dict
-        Gauge type, centre, needle tip, angle and measurement.
+        Gauge type, centre, needle, angle and measurement.
     """
 
     gauge_type = gauge["type"]
     centre = gauge["centre"]
-    needle_tip = gauge["needle_tip"]
+    needle = gauge["needle"]
 
     # Cannot calculate angle unless both points were detected
     # and associated with the gauge.
-    if centre is None or needle_tip is None:
+    if centre is None or needle is None:
 
         return {
             "type": gauge_type,
             "centre": centre,
-            "needle_tip": needle_tip,
+            "needle": needle,
             "angle": None,
             "measurement": None,
             "valid": False,
@@ -121,7 +121,7 @@ def read_gauge(gauge):
 
     angle = calculate_angle(
         centre,
-        needle_tip,
+        needle,
     )
 
     measurement = angle_to_measurement(
@@ -132,7 +132,7 @@ def read_gauge(gauge):
     return {
         "type": gauge_type,
         "centre": centre,
-        "needle_tip": needle_tip,
+        "needle": needle,
         "angle": angle,
         "measurement": measurement,
         "valid": True,
