@@ -1,5 +1,9 @@
 import time
 from bme280 import BME280
+from smbus2 import SMBus
+
+# Create a single shared SMBus instance (just like display_ALL.py)
+bus = SMBus(1)
 
 # Weather and Light
 # Safely import the module without forcing immediate hardware connection
@@ -16,7 +20,7 @@ def get_ltr559():
     global _ltr559_instance
     if _ltr559_instance is None and LTR559_AVAILABLE:
         try:
-            _ltr559_instance = LTR559()
+            _ltr559_instance = LTR559(i2c_dev=bus)
         except Exception as e:
             print(f"Warning: Could not initialize LTR559 sensor: {e}")
     return _ltr559_instance
@@ -24,12 +28,12 @@ def get_ltr559():
 # Gas readings
 from enviroplus import gas
 
-# BME280 temperature/pressure/humidity sensor
-bme280 = BME280()
+# BME280 temperature/pressure/humidity sensor using the shared bus
+bme280 = BME280(i2c_dev=bus)
+
 # Tuning factor for compensation. Decrease this number to adjust the
 # temperature down, and increase to adjust up
 factor = 2.25
-
 
 # Get average CPU Temperature
     # Run function with cpu_temps_record array to keep cpu temps averaging. Initialise empty cpu_temps_record array before running in loop.
