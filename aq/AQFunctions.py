@@ -9,9 +9,6 @@ try:
 except ImportError:
     LTR559_AVAILABLE = False
 
-bme280 = BME280()
-factor = 2.25
-
 # Keep a global or lazy-loaded instance variable
 _ltr559_instance = None
 
