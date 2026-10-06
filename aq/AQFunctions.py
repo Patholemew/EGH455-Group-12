@@ -48,14 +48,14 @@ def get_temperature(cpu_temps_record):
 
 # Get all other sensor readings
 def get_readings():
-    ltr = get_ltr559()
+    ltr559 = get_ltr559()
     
-    if ltr is not None:
+    if ltr559  is not None:
         try:
-            proximity = ltr.get_proximity()
+            proximity = ltr559.get_proximity()
             # variable = "light" | unit = "Lux"
             if proximity < 10:
-                light = ltr.get_lux()
+                light = ltr559.get_lux()
             else:
                 light = 1
         except Exception:
