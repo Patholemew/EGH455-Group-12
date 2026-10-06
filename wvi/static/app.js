@@ -34,7 +34,7 @@ async function refresh() {
       : video.stale ? "Stale" : "Receiving",
     video.stale ? "stale" : "live");
   
-  showTargets(data.targets);
+  // showTargets(data.targets);
   
   if (!data.air) {
     setBadge("air-state", "Waiting", "");

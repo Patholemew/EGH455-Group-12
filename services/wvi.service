@@ -7,7 +7,7 @@ User=egh455-g12
 WorkingDirectory=/home/egh455-g12/EGH455-Group-12/wvi
 Environment=APP_DATA_DIR=/var/lib/uav-wvi
 Environment=APP_FRAME_FILE=/dev/shm/uav/liveimage.jpg
-ExecStart=/home/egh455-g12/EGH455-Group-12/.venv/bin/gunicorn --workers 3 --bind 127.0.0.1:8000 wvi_main:app
+ExecStart=/home/egh455-g12/EGH455-Group-12/.venv/bin/gunicorn --worker-class gthread --workers 2 --threads 8 --timeout 60 --bind 127.0.0.1:8000 wvi_main:app
 Restart=always
 RestartSec=3
 

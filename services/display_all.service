@@ -1,6 +1,8 @@
 [Unit]
 Description=Enviro+ display service
-After=aip.service
+After=wvi.service aip.service
+Wants=wvi.service
+Conflicts=display_ip.service
 
 [Service]
 User=egh455-g12

@@ -1,43 +1,42 @@
-"""Entry point for the AQ subsystem."""
-import AQFunctions      #import functions from AQFunctions.py file
-from post_air import send_to_wvi
-import requests
+import fcntl
+from pathlib import Path
+import sys
 import time
 
-sensor_readings = AQFunctions.readings()    #Initialise "readings" class
-
-SEND2SERVER = 0     # Variable in place of WVI function - code is a proxy
 
 def main():
-    """Run the AQ subsystem."""
-    while True:
-        timestamp = time.monotonic()
+    lock_path = Path.home() / ".cache" / "uav" / "aq.lock"
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+
+    with lock_path.open("a") as lock:
         try:
-            sensor_readings.record_data()
-            send_to_wvi(sensor_readings)
-            # sensor_readings.print_data()    # For Testing, prints to terminal
-        except requests.RequestException as e:
-            print(f"WVI API POST FAILURE: {e}")
-        except Exception as e:
-            print(f"AQ reading failed")
-        time.sleep(max(0, 1 - (time.monotonic() - timestamp)))
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            print("AQ is already running. Stop aq.service first.")
+            return 1
 
-    # Should be running continuously to save data, or use lightweight method
+        import AQFunctions
+        import requests
+        from post_air import send_to_wvi
 
-    # Lightweight way to get information for sending to server
-    # cpu_temp, env_temp, oxidising, reducing, nh3, light, humidity, pressure, timestamp = sensor_readings.recent_readings()
-    # SEND2SERVER = [cpu_temp, env_temp, oxidising, reducing, nh3, light, humidity, pressure, timestamp] # Sends just recent sensor reading
-    # Simpler way to write the lightweight method.
-    # SEND2SERVER = list(sensor_readings.recent_readings())
+        sensor_readings = AQFunctions.readings()
 
-    # Sends entire sensor readings class
-    # SEND2SERVER = sensor_readings  
+        while True:
+            started = time.monotonic()
 
-    # print("AQ subsystem main is not fully tested yet.")
+            try:
+                sensor_readings.record_data()
+                send_to_wvi(sensor_readings)
+            except requests.RequestException as error:
+                print(f"WVI POST failed: {error}", flush=True)
+            except OSError as error:
+                print(f"Sensor reading failed: {error}", flush=True)
+
+            time.sleep(max(0, 1 - (time.monotonic() - started)))
 
 
 if __name__ == "__main__":
     try:
-        main()
+        sys.exit(main())
     except KeyboardInterrupt:
         print("AQ stopped")
