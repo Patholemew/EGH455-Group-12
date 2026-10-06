@@ -2,13 +2,28 @@ import time
 from bme280 import BME280
 
 # Weather and Light
+# Safely import the module without forcing immediate hardware connection
 try:
-    # Transitional fix for breaking change in LTR559
     from ltr559 import LTR559
-    ltr559 = LTR559()
+    LTR559_AVAILABLE = True
 except ImportError:
-    import ltr559
+    LTR559_AVAILABLE = False
 
+bme280 = BME280()
+factor = 2.25
+
+# Keep a global or lazy-loaded instance variable
+_ltr559_instance = None
+
+def get_ltr559():
+    global _ltr559_instance
+    if _ltr559_instance is None and LTR559_AVAILABLE:
+        try:
+            _ltr559_instance = LTR559()
+        except Exception as e:
+            print(f"Warning: Could not initialize LTR559 sensor: {e}")
+    return _ltr559_instance
+    
 # Gas readings
 from enviroplus import gas
 
@@ -33,16 +48,23 @@ def get_temperature(cpu_temps_record):
 
 # Get all other sensor readings
 def get_readings():
-    proximity = ltr559.get_proximity()
+    ltr = get_ltr559()
+    
+    if ltr is not None:
+        try:
+            proximity = ltr.get_proximity()
+            # variable = "light" | unit = "Lux"
+            if proximity < 10:
+                light = ltr.get_lux()
+            else:
+                light = 1
+        except Exception:
+            light = 0  # Fallback value if I2C glitches mid-run
+    else:
+        light = 0
 
     # variable = "humidity" | unit = "%"
     humidity = bme280.get_humidity()
-
-    # variable = "light" | unit = "Lux"
-    if proximity < 10:
-        light = ltr559.get_lux()
-    else:
-        light = 1
     
     # variable = "pressure" | unit = "hPa"
     pressure = bme280.get_pressure()
