@@ -13,6 +13,17 @@ FALLBACK_LABELS = [
     "Plain Gauge",
 ]
 
+CLASS_CONFIDENCE = {
+    "Blue Gauge": 0.50,
+    "Plain Gauge": 0.50,
+    "Gauge Centre": 0.20,
+    "Needle": 0.15,
+    "Open Valve": 0.30,
+    "Closed Valve": 0.30,
+}
+
+DEFAULT_CONFIDENCE = 0.25
+
 
 def bbox_centre(bbox):
     """Return centre point (x, y) of a bounding box."""
@@ -349,7 +360,7 @@ class OakDetector:
             (x1, y1),
             (x2, y2),
             (0, 255, 0),
-            2,
+            1,
         )
 
         cv2.putText(
@@ -405,12 +416,13 @@ class OakDetector:
             for d in detection_message.detections
         ]
 
-        # Ignore the YOLO ArUco class.
-        # ArUco detection is handled separately using OpenCV.
         detections = [
             d for d in detections
-            if d["label"] != "ArUco"
-]
+            if d["confidence"] >= CLASS_CONFIDENCE.get(
+                d["label"],
+                DEFAULT_CONFIDENCE,
+            )
+        ]
 
         # -------------------------------------------------------------
         # Split detections by type
@@ -485,8 +497,31 @@ class OakDetector:
         # Annotated image
         # -------------------------------------------------------------
 
-        for detection in detections:
+        display_detections = []
 
+        # Gauge detection has already been reduced to the selected
+        # (largest) gauge.
+        display_detections.extend(gauge_detections)
+
+        # Only draw the centre and needle actually selected for the gauge.
+        for gauge in gauges:
+
+            if gauge["centre"] is not None:
+                for detection in centre_detections:
+                    if detection["centre"] == gauge["centre"]:
+                        display_detections.append(detection)
+                        break
+
+            if gauge["needle"] is not None:
+                for detection in needle_detections:
+                    if detection["centre"] == gauge["needle"]:
+                        display_detections.append(detection)
+                        break
+
+        # Leave valve display/processing unchanged.
+        display_detections.extend(valve_detections)
+
+        for detection in display_detections:
             self._draw_detection(
                 annotated_frame,
                 detection,
