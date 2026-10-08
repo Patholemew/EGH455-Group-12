@@ -3,6 +3,8 @@ from pathlib import Path
 import sys
 import time
 import requests
+import AQFunctions
+
 from post_air import send_to_wvi
 
 def main():
@@ -15,9 +17,6 @@ def main():
         except BlockingIOError:
             print("AQ is already running. Stop aq.service first.")
             return 1
-
-        import AQFunctions
-
         sensor_readings = AQFunctions.readings()
 
         while True:
