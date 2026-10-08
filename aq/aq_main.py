@@ -2,7 +2,8 @@ import fcntl
 from pathlib import Path
 import sys
 import time
-
+import requests
+from post_air import send_to_wvi
 
 def main():
     lock_path = Path.home() / ".cache" / "uav" / "aq.lock"
@@ -16,8 +17,6 @@ def main():
             return 1
 
         import AQFunctions
-        import requests
-        from post_air import send_to_wvi
 
         sensor_readings = AQFunctions.readings()
 
