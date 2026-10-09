@@ -3,3 +3,4 @@ __pycache__/
 *.pyc
 wvi/data/
 .DS_Store
+*.pyo
