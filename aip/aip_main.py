@@ -33,7 +33,7 @@ MODEL = (
 
 CONFIDENCE = 0.15 # Minimum confidence for object detection
 DRILL_THRESHOLD = 2.0 # Gauge measurement below which drilling starts
-SHOW_DISPLAY = True # Whether to show the annotated frame in a window. Set to False for headless operation.
+SHOW_DISPLAY = False # Whether to show the annotated frame in a window. Keep False for the headless systemd service.
 PRINT_RESULTS = True # Whether to print detection results to the console. Set to False for headless operation.
 #---------------------------------------------------------
 
@@ -208,7 +208,8 @@ def main(argv=None):
             if drill_thread is not None:
                 drill_thread.join()
 
-            cv2.destroyAllWindows()
+            if SHOW_DISPLAY:
+                cv2.destroyAllWindows()
 
 
 if __name__ == "__main__":

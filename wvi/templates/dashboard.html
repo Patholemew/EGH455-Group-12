@@ -1,58 +1,52 @@
 {% extends "base.html" %}
 {% block title %}Dashboard{% endblock %}
 {% block content %}
-
-<h1>Payload dashboard</h1>
-<section class="panel">
-  <div class="panel-heading">
-    <h2>Live video</h2>
-    <span id="video-state" class="badge">Waiting</span>
-  </div>
-  <img id="live-video" alt="Latest annotated camera frame">
-</section>
-<section class="panel">
-  <div class="panel-heading">
-    <h2>Environment readings</h2>
-    <span id="air-state" class="badge">Waiting</span>
-  </div>
-  <div class="readings">
-    <div class="reading">
-      <span>Temperature</span><strong id="temperature_c">—</strong><small>°C</small>
-    </div>
-    <div class="reading">
-      <span>Pressure</span><strong id="pressure_hpa">—</strong><small>hPa</small>
-    </div>
-    <div class="reading">
-      <span>Humidity</span><strong id="humidity_pct">—</strong><small>%</small>
-    </div>
-    <div class="reading">
-      <span>Light</span><strong id="light_lux">—</strong><small>lux</small>
-    </div>
-  </div>
-</section>
-
-<section class="panel">
-  <div class="panel-heading">
-    <h2>Gas readings</h2>
-  </div>
-  <div class="readings">
-    <div class="reading">
-      <span>Reducing Gases</span><strong id="gas_reducing">—</strong><small>kΩ</small>
-    </div>
-    <div class="reading">
-      <span>Oxidising Gases</span><strong id="gas_oxidising">—</strong><small>kΩ</small>
-    </div>
-    <div class="reading">
-      <span>Ammonia</span><strong id="gas_ammonia">—</strong><small>kΩ</small>
-    </div>
-  </div>
-</section>
-
-<section class="panel">
+<div class="dashboard-grid">
+  <section class="panel video-panel" aria-label="Camera feed">
     <div class="panel-heading">
-        <h2>Latest target observations</h2>
+      <span id="video-state" class="badge" role="status">Waiting</span>
     </div>
-    <div id="current-targets" class="readings"></div>
-</section>
+    <img id="live-video" alt="Latest annotated camera frame">
+    <p id="detection-alert" class="detection-alert" role="alert" hidden></p>
+    <p class="panel-note">Camera feed with detection overlays</p>
+  </section>
 
+  <section class="panel sensor-panel" aria-labelledby="sensor-heading">
+    <div class="panel-heading">
+      <h2 id="sensor-heading">Environment</h2>
+      <span id="air-state" class="badge" role="status">Waiting</span>
+    </div>
+    <p id="sensor-updated" class="panel-note">Waiting for sensor readings.</p>
+    <div class="readings environment-readings">
+      <div class="reading">
+        <span>Temperature</span>
+        <div class="metric-value"><strong id="temperature_c">—</strong><small>°C</small></div>
+      </div>
+      <div class="reading">
+        <span>Humidity</span>
+        <div class="metric-value"><strong id="humidity_pct">—</strong><small>%</small></div>
+      </div>
+      <div class="reading">
+        <span>Pressure</span>
+        <div class="metric-value"><strong id="pressure_hpa">—</strong><small>hPa</small></div>
+      </div>
+      <div class="reading">
+        <span>Light</span>
+        <div class="metric-value"><strong id="light_lux">—</strong><small>lux</small></div>
+      </div>
+    </div>
+
+    <div class="sensor-subheading">
+      <h3>Gas sensor resistance</h3>
+      <span>kΩ</span>
+    </div>
+    <div class="readings gas-readings">
+      <div class="reading"><span>Reducing</span><strong id="gas_reducing">—</strong></div>
+      <div class="reading"><span>Oxidising</span><strong id="gas_oxidising">—</strong></div>
+      <div class="reading"><span>Ammonia</span><strong id="gas_ammonia">—</strong></div>
+    </div>
+    <a class="panel-link" href="/charts">View sensor history →</a>
+  </section>
+
+</div>
 {% endblock %}

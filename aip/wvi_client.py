@@ -3,6 +3,7 @@ import os
 import time
 from pathlib import Path
 from urllib.request import Request, urlopen
+from uuid import uuid4
 
 WVI_URL = os.environ.get("WVI_URL", "http://127.0.0.1:8000")
 FRAME_PATH = Path(os.environ.get("WVI_FRAME_FILE", "/dev/shm/uav/liveimage.jpg"))
@@ -40,6 +41,8 @@ def post_detection(payload):
 
 last_sent = 0.0
 frame_id = 0
+CAPTURE_INTERVAL_SECONDS = 1.0
+last_captured = {}
 
 VALVE_STATES = {"Open Valve": "open", "Closed Valve": "closed"}
 
@@ -90,17 +93,25 @@ def send_aip_output(aip_data, aip_image):
             "coordinate_frame": "camera position in marker frame (m)"
         })
 
-    for detection in detections:
-        filename = None
-        if aip_image is not None:
-            filename = detection["event_id"] + ".jpg"
-            save_capture(aip_image, filename)
+    # Keep independent historical captures without saving every video frame.
+    detections = [
+        detection for detection in detections
+        if now - last_captured.get(detection["event_id"], float("-inf"))
+        >= CAPTURE_INTERVAL_SECONDS
+    ]
+    filename = None
+    if detections and aip_image is not None:
+        # Targets observed in the same frame share that frame's immutable image.
+        filename = "capture-" + uuid4().hex + ".jpg"
+        save_capture(aip_image, filename)
 
+    for detection in detections:
         detection["captured_at"] = timestamp
         detection["confidence"] = None
         detection["image_filename"] = filename
 
         try:
             post_detection(detection)
+            last_captured[detection["event_id"]] = now
         except Exception as error:
             print(f"WVI post failed: {error}", flush=True)

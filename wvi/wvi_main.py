@@ -312,10 +312,16 @@ def ingest_target():
     except (KeyError, TypeError, ValueError):
         abort(400, f"Invalid {kind} detection payload")
 
+    if kind == "valve":
+        detail = row["valve_state"]
+    elif kind == "gauge":
+        detail = f"{row['gauge_reading']:.2f} {row['gauge_unit']}"
+    else:
+        detail = (f"camera X {row['x']:.3f}, Y {row['y']:.3f}, Z {row['z']:.3f} m"
+                  f" ({row['coordinate_frame']})")
+    message = f"{kind.capitalize()} observation received: {row['event_id']} — {detail}"
+
     with closing(connect()) as con, con:
-        seen = con.execute(
-            "SELECT 1 FROM detections WHERE event_id = ? LIMIT 1",
-            (row["event_id"],)).fetchone()
         con.execute("""
             INSERT INTO detections (event_id, type, captured_at, received_at, confidence,
                 image_filename, valve_state, marker_id, x, y, z, coordinate_frame,
@@ -324,10 +330,9 @@ def ingest_target():
                 :image_filename, :valve_state, :marker_id, :x, :y, :z, :coordinate_frame,
                 :gauge_reading, :gauge_unit)
         """, row)
-        if not seen:
-            con.execute(
-                "INSERT INTO logs (time, source, message) VALUES (?, ?, ?)",
-                (row["received_at"], "AIP", f"New {kind} detected: {row['event_id']}"))
+        con.execute(
+            "INSERT INTO logs (time, source, message) VALUES (?, ?, ?)",
+            (row["received_at"], "AIP", message))
 
     return jsonify(ok=True), 201
 
@@ -337,7 +342,10 @@ def targets():
     if kind not in {"all", "valve", "aruco", "gauge"}:
         abort(400, "Unknown target filter")
 
-    conditions = ["id IN (SELECT MIN(id) FROM detections GROUP BY event_id)"]
+    # One row per target per saved capture. Older installations reused a single
+    # filename per target; keep those as one historical entry rather than
+    # presenting repeated metadata as separate images.
+    conditions = ["id IN (SELECT MIN(id) FROM detections GROUP BY event_id, image_filename)"]
     values = []
     if kind != "all":
         conditions.append("type = ?")

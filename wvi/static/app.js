@@ -22,6 +22,27 @@ function setBadge(id, message, state) {
   badge.className = "badge " + state;
 }
 
+function describe(row) {
+  if (row.type === "valve") return "Valve: " + (row.valve_state || "unknown");
+  if (row.type === "aruco") return "ArUco marker " + row.marker_id;
+  if (row.type === "gauge") {
+    const reading = row.gauge_reading;
+    return "Gauge: " + (Number.isFinite(reading) ? reading.toFixed(2) : "N/A")
+      + (row.gauge_unit ? " " + row.gauge_unit : "");
+  }
+  return row.type || "Unknown target";
+}
+
+function showDetectionAlert(targets, video) {
+  const alert = document.getElementById("detection-alert");
+  const visible = video.available && !video.stale
+    ? targets.filter(target => !target.stale) : [];
+  const message = visible.length
+    ? "Target detected — " + visible.map(describe).join(" · ") : "";
+  if (alert.textContent !== message) alert.textContent = message;
+  alert.hidden = visible.length === 0;
+}
+
 async function refresh() {
   const response = await fetch("/api/data", {cache: "no-store"});
   if (!response.ok) throw new Error("Request failed: " + response.status);
@@ -33,13 +54,17 @@ async function refresh() {
       : video.age_seconds === null ? "No timestamp"
       : video.stale ? "Stale" : "Receiving",
     video.stale ? "stale" : "live");
-  
-  // showTargets(data.targets);
+
+  showDetectionAlert(data.targets, data.video);
   
   if (!data.air) {
     setBadge("air-state", "Waiting", "");
+    document.getElementById("sensor-updated").textContent = "Waiting for sensor readings.";
     return;
   }
+
+  document.getElementById("sensor-updated").textContent =
+    "Last sample: " + new Date(data.air.captured_at * 1000).toLocaleString();
 
   for (const key of metrics) {
     document.getElementById(key).textContent = data.air[key].toFixed(1);
@@ -54,6 +79,7 @@ async function loop() {
   try {
     await refresh();
   } catch (error) {
+    showDetectionAlert([], {available: false, stale: true});
     setBadge("air-state", "Connection lost", "error");
     setBadge("video-state", "Connection lost", "error");
   }
@@ -136,6 +162,14 @@ if (page === "charts") {
 if (page === "targets") {
   let filter = "all";
 
+  function cameraPosition(row) {
+    if (row.type !== "aruco") return "—";
+    return ["x", "y", "z"].map(axis =>
+      axis.toUpperCase() + ": "
+      + (Number.isFinite(row[axis]) ? row[axis].toFixed(3) : "N/A")
+    ).join(", ");
+  }
+
   function cell(text) {
     const td = document.createElement("td");
     td.textContent = text;
@@ -179,7 +213,7 @@ if (page === "targets") {
         imageCell(row),
         cell(new Date(row.captured_at * 1000).toLocaleTimeString()),
         cell(describe(row)),
-        cell(row.confidence === null ? "N/A" : (100 * row.confidence).toFixed(1) + "%"),
+        cell(cameraPosition(row)),
       );
       body.append(tr);
     }
