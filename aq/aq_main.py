@@ -40,7 +40,7 @@ def main():
         REPEAT = False
         try:
             sensor_readings.record_data()
-            if args.Test or agrs.HistTest:
+            if args.Test or args.HistTest:
                 sensor_readings.print_data()    #For Testing, prints to terminal
             if args.HistTest and len(sensor_readings.timestamp())==5:
                 print(f'''__Historical Test - First Reading Recollection__        
@@ -53,7 +53,7 @@ def main():
                 Reduced:     {sensor_readings.gases.reducing[0]} {sensor_readings.gas_unit}\n
                 nh3:         {sensor_readings.gases.nh3[0]} {sensor_readings.gas_unit}\n
                 __READING RETRIEVAL SUCCESS__\n''')
-            if !(args.NoWVI):
+            if not args.NoWVI:
                 try:
                     if args.lightweight:
                         # Lightweight way to get information for sending to server
@@ -71,7 +71,7 @@ def main():
         timestamp = time.monotonic()
         try:
             sensor_readings.record_data()
-            if args.Test or agrs.HistTest:
+            if args.Test or args.HistTest:
                 sensor_readings.print_data()    #For Testing, prints to terminal
             if args.HistTest and len(sensor_readings.timestamp())==RECALL_AFTER:
                 print(f'''__Historical Test - First Reading Recollection__        
@@ -116,7 +116,7 @@ def main():
 
 
 if __name__ == "__main__":
-    try:
-        main()
-    except Keyboard Interrupt:
-        print("AQ stopped")
+    #try:
+    main()
+    #except Keyboard Interrupt:
+        #print("AQ stopped")
