@@ -20,7 +20,7 @@ def print_results(result, gauge_reading, marker_poses=()):
 
     else:
         print(
-            f'{gauge_reading["type"]} detected, but centre/tip could not be determined'
+            f'{gauge_reading["type"]} detected, but centre/needle could not be determined'
         )
 
     # Valve detections

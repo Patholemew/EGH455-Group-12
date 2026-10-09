@@ -5,14 +5,24 @@ import depthai as dai
 
 
 FALLBACK_LABELS = [
-    "ArUco",
     "Blue Gauge",
     "Closed Valve",
     "Gauge Centre",
-    "Needle Tip",
+    "Needle",
     "Open Valve",
     "Plain Gauge",
 ]
+
+CLASS_CONFIDENCE = {
+    "Blue Gauge": 0.50,
+    "Plain Gauge": 0.50,
+    "Gauge Centre": 0.20,
+    "Needle": 0.15,
+    "Open Valve": 0.30,
+    "Closed Valve": 0.30,
+}
+
+DEFAULT_CONFIDENCE = 0.25
 
 
 def bbox_centre(bbox):
@@ -50,7 +60,7 @@ class OakDetector:
     Handles:
     - Blue / Plain gauges
     - Gauge centres
-    - Needle tips
+    - Needles
     - Open / Closed valves
 
     Returns both:
@@ -219,10 +229,10 @@ class OakDetector:
         self,
         gauge_detections,
         centre_detections,
-        tip_detections,
+        needle_detections,
     ):
         """
-        Associate Gauge Centre and Needle Tip detections with
+        Associate Gauge Centre and Needle detections with
         the gauge bounding box that contains them.
         """
 
@@ -240,8 +250,8 @@ class OakDetector:
                 "confidence": detection["confidence"],
                 "centre": None,
                 "centre_confidence": None,
-                "needle_tip": None,
-                "needle_tip_confidence": None,
+                "needle": None,
+                "needle_confidence": None,
             })
 
         # -------------------------------------------------------------
@@ -284,10 +294,10 @@ class OakDetector:
                     )
 
         # -------------------------------------------------------------
-        # Associate needle tip detections
+        # Associate needle detections
         # -------------------------------------------------------------
 
-        for detection in tip_detections:
+        for detection in needle_detections:
 
             point = detection["centre"]
 
@@ -309,16 +319,16 @@ class OakDetector:
                     ),
                 )
 
-                # Keep highest confidence tip.
+                # Keep highest confidence needle.
                 if (
-                    gauge["needle_tip_confidence"]
+                    gauge["needle_confidence"]
                     is None
                     or detection["confidence"]
-                    > gauge["needle_tip_confidence"]
+                    > gauge["needle_confidence"]
                 ):
-                    gauge["needle_tip"] = point
+                    gauge["needle"] = point
 
-                    gauge["needle_tip_confidence"] = (
+                    gauge["needle_confidence"] = (
                         detection["confidence"]
                     )
 
@@ -350,7 +360,7 @@ class OakDetector:
             (x1, y1),
             (x2, y2),
             (0, 255, 0),
-            2,
+            1,
         )
 
         cv2.putText(
@@ -367,7 +377,7 @@ class OakDetector:
         # Mark bounding-box centre for important point classes.
         if label in (
             "Gauge Centre",
-            "Needle Tip",
+            "Needle",
         ):
 
             x, y = detection["centre"]
@@ -406,12 +416,13 @@ class OakDetector:
             for d in detection_message.detections
         ]
 
-        # Ignore the YOLO ArUco class.
-        # ArUco detection is handled separately using OpenCV.
         detections = [
             d for d in detections
-            if d["label"] != "ArUco"
-]
+            if d["confidence"] >= CLASS_CONFIDENCE.get(
+                d["label"],
+                DEFAULT_CONFIDENCE,
+            )
+        ]
 
         # -------------------------------------------------------------
         # Split detections by type
@@ -445,9 +456,9 @@ class OakDetector:
             if d["label"] == "Gauge Centre"
         ]
 
-        tip_detections = [
+        needle_detections = [
             d for d in detections
-            if d["label"] == "Needle Tip"
+            if d["label"] == "Needle"
         ]
 
         valve_detections = [
@@ -465,7 +476,7 @@ class OakDetector:
         gauges = self._associate_gauges(
             gauge_detections,
             centre_detections,
-            tip_detections,
+            needle_detections,
         )
 
         # -------------------------------------------------------------
@@ -486,8 +497,31 @@ class OakDetector:
         # Annotated image
         # -------------------------------------------------------------
 
-        for detection in detections:
+        display_detections = []
 
+        # Gauge detection has already been reduced to the selected
+        # (largest) gauge.
+        display_detections.extend(gauge_detections)
+
+        # Only draw the centre and needle actually selected for the gauge.
+        for gauge in gauges:
+
+            if gauge["centre"] is not None:
+                for detection in centre_detections:
+                    if detection["centre"] == gauge["centre"]:
+                        display_detections.append(detection)
+                        break
+
+            if gauge["needle"] is not None:
+                for detection in needle_detections:
+                    if detection["centre"] == gauge["needle"]:
+                        display_detections.append(detection)
+                        break
+
+        # Leave valve display/processing unchanged.
+        display_detections.extend(valve_detections)
+
+        for detection in display_detections:
             self._draw_detection(
                 annotated_frame,
                 detection,

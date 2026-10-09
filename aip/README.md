@@ -13,7 +13,17 @@ Run the entry point from the repository root:
 python3 aip/aip_main.py
 ```
 
-The program requires:
+`aip_main.py` captures frames from the OAK-D Lite using `OakDetector`, reads
+gauges and valves, and displays ArUco outlines and camera pose estimates.
+Requires a connected camera, DepthAI v3, OpenCV (`cv2`)
+with GUI support, `gpiozero`, and a graphical desktop session. The drill servo
+must be connected to BCM GPIO 12.
+
+Set `DRILL_THRESHOLD` in `aip_main.py` to the required gauge measurement. A valid
+measurement crossing above the threshold starts one drill-and-return cycle while
+camera processing continues. The trigger rearms only after a valid measurement
+returns to or below the threshold. Missing and invalid gauge readings do not
+trigger or rearm drilling, and overlapping cycles are prevented.
 
 - an OAK-D Lite connected to the host;
 - DepthAI v3;
@@ -39,12 +49,11 @@ the fallback labels in `oak_detector.py` when the archive has none.
 
 ## Object detection and gauge reading
 
-The detector recognises `Blue Gauge`, `Plain Gauge`, `Gauge Centre`, `Needle
-Tip`, `Open Valve`, and `Closed Valve`. Its YOLO `ArUco` class is ignored
+The detector recognises `Blue Gauge`, `Plain Gauge`, `Gauge Centre`, `Needle`, `Open Valve`, and `Closed Valve`. Its YOLO `ArUco` class is ignored
 because OpenCV performs marker detection separately.
 
 Only one physical gauge is expected. If YOLO returns multiple gauge boxes, AIP
-keeps the largest and associates the highest-confidence centre and needle-tip
+keeps the largest and associates the highest-confidence centre and needle
 detections contained within it. `process_gauge()` then reads that gauge. The
 reading is invalid when either point is missing.
 
@@ -175,7 +184,7 @@ Example metadata after conversion to JSON-compatible values:
 An empty `valves` or `aruco` list means none were detected in that frame. If
 no gauge is detected, `gauge` is `None` (`null` in JSON). A detected gauge can
 instead have `valid: false`, with `angle` and `measurement` set to `None`, when
-its centre or needle tip cannot be determined.
+its centre or needle cannot be determined.
 
 ### How it is sent to WVI
 
