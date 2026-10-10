@@ -16,7 +16,7 @@ FALLBACK_LABELS = [
 CLASS_CONFIDENCE = {
     "Blue Gauge": 0.50,
     "Plain Gauge": 0.50,
-    "Gauge Centre": 0.20,
+    "Gauge Centre": 0.10,
     "Needle": 0.15,
     "Open Valve": 0.30,
     "Closed Valve": 0.30,
