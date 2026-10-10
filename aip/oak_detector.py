@@ -31,7 +31,7 @@ DEFAULT_CONFIDENCE = 0.25
 # 1.0 = largest centred square
 # 2.0 = 2x zoom
 # 3.0 = 3x zoom
-CROP_ZOOM = 2.0
+CROP_ZOOM = 2.2
 
 # OAK-D Lite RGB full resolution.
 CAMERA_WIDTH = 4000
