@@ -15,10 +15,10 @@ from gauge_reader import process_gauge
 # ============================================================
 
 TRUE_VALUE = 1.75        # Actual gauge value
-TEST_DISTANCE = 1.3     # Distance from camera to gauge, metres
+TEST_DISTANCE = 0.7     # Distance from camera to gauge, metres
 NUM_FRAMES = 200        # Number of frames to record
-GAUGE_TYPE = "blue"     # Gauge type: "blue" or "plain"
-POSITION = "right"       # Position of camera from gauge: "centre", "left", or "right"
+GAUGE_TYPE = "plain"    # Gauge type: "blue" or "plain"
+POSITION = "left"     # Position of camera from gauge: "centre", "left", or "right"
 
 SHOW_DISPLAY = True
 
@@ -30,7 +30,7 @@ MODEL = (
 )
 
 # Same minimum NN confidence as aip_main.py
-CONFIDENCE = 0.15
+CONFIDENCE = 0.10
 
 
 # ============================================================
