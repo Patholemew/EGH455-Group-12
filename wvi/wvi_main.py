@@ -277,7 +277,8 @@ def history():
 
     with closing(connect()) as con:
         rows = con.execute("""
-            SELECT captured_at, temperature_c, pressure_hpa, humidity_pct, light_lux
+            SELECT captured_at, temperature_c, pressure_hpa, humidity_pct, light_lux,
+                   gas_reducing, gas_oxidising, gas_ammonia
             FROM air_readings
             WHERE captured_at >= ?
             ORDER BY captured_at ASC, id ASC

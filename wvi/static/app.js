@@ -13,13 +13,19 @@ const metrics = [
   "gas_reducing", "gas_oxidising", "gas_ammonia",
 ];
 
-const chartKeys = ["temperature_c", "humidity_pct", "pressure_hpa", "light_lux"];
+const chartKeys = [
+  "temperature_c", "humidity_pct", "pressure_hpa", "light_lux",
+  "gas_reducing", "gas_oxidising", "gas_ammonia",
+];
 
 const chartLabels = {
   temperature_c: "Temperature",
   humidity_pct: "Humidity",
   pressure_hpa: "Pressure",
   light_lux: "Light",
+  gas_reducing: "Reducing (ppm)",
+  gas_oxidising: "Oxidising (ppm)",
+  gas_ammonia: "Ammonia (ppm)",
 };
 
 function setBadge(id, message, state) {
