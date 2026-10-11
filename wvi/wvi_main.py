@@ -15,6 +15,7 @@ FRAME = Path(os.environ.get("APP_FRAME_FILE", str(DATA / "liveimage.jpg")))
 FRAME_META = FRAME.with_suffix(".json")
 SNAPSHOTS = DATA / "snapshots"
 HEARTBEAT_MESSAGE = "Heartbeat: API responded"
+LCD_PANES = {1: "IP Address", 2: "Temperature", 3: "Video Feed"}
 
 def connect():
     con = sqlite3.connect(DATABASE, timeout=5)
@@ -29,6 +30,14 @@ def init_db():
 
     with closing(connect()) as con, con:
         con.execute("PRAGMA journal_mode=WAL")
+
+        con.execute("""
+            CREATE TABLE IF NOT EXISTS lcd_state (
+                id INTEGER PRIMARY KEY CHECK (id = 1),
+                pane INTEGER NOT NULL CHECK (pane IN (1, 2, 3))
+            )
+        """)
+        con.execute("INSERT OR IGNORE INTO lcd_state (id, pane) VALUES (1, 1)")
 
         con.execute("""
             CREATE TABLE IF NOT EXISTS air_readings (
@@ -98,7 +107,7 @@ def api_errors(error):
 
 @app.get("/")
 def index():
-    return render_template("dashboard.html", page="dashboard")
+    return render_template("dashboard.html", page="dashboard", lcd_panes=LCD_PANES)
 
 @app.get("/charts")
 def charts_page():
@@ -121,6 +130,29 @@ def live_frame():
 @app.get("/snapshots/<filename>")
 def snapshot(filename):
     return send_from_directory(SNAPSHOTS, filename)
+
+def lcd_status(con):
+    pane = con.execute("SELECT pane FROM lcd_state WHERE id = 1").fetchone()["pane"]
+    return {"pane": pane, "label": LCD_PANES[pane]}
+
+
+@app.route("/api/lcd", methods=["GET", "POST"])
+def lcd_control():
+    with closing(connect()) as con, con:
+        if request.method == "POST":
+            payload = request.get_json(silent=True)
+            if not isinstance(payload, dict):
+                abort(400, "Send a JSON object with Content-Type: application/json")
+            pane = payload.get("pane")
+            if type(pane) is not int or pane not in LCD_PANES:
+                abort(400, "pane must be 1 (IP Address), 2 (Temperature) or 3 (Video Feed)")
+            con.execute("UPDATE lcd_state SET pane = ? WHERE id = 1", (pane,))
+            con.execute(
+                "INSERT INTO logs (time, source, message) VALUES (?, ?, ?)",
+                (time.time(), "WVI", "LCD screen selected: " + LCD_PANES[pane]))
+        state = lcd_status(con)
+    return jsonify(state), {"Cache-Control": "no-store"}
+
 
 @app.post("/api/heartbeat")
 def heartbeat():
@@ -196,6 +228,7 @@ def video_status(now):
 def current_data():
     now = time.time()
     with closing(connect()) as db:
+        lcd = lcd_status(db)
         air_row = db.execute("""
             SELECT * FROM air_readings
             ORDER BY captured_at DESC, id DESC
@@ -223,6 +256,7 @@ def current_data():
     return jsonify(
         server_time=now,
         air=air,
+        lcd=lcd,
         video=video_status(now),
         targets=targets
     )

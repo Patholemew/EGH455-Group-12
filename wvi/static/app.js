@@ -1,6 +1,12 @@
 "use strict";
 
 const page = document.body.dataset.page;
+const lcdButtons = document.querySelectorAll("[data-lcd-pane]");
+const lcdStatus = document.getElementById("lcd-status");
+const lcdError = document.getElementById("lcd-error");
+let lcdPending = false;
+let lcdRequestVersion = 0;
+let targetSpeech = null;
 
 const metrics = [
   "temperature_c", "pressure_hpa", "humidity_pct", "light_lux",
@@ -38,15 +44,55 @@ function showDetectionAlert(targets, video) {
   const visible = video.available && !video.stale
     ? targets.filter(target => !target.stale) : [];
   const message = visible.length
-    ? "Target detected — " + visible.map(describe).join(" · ") : "";
+    ? visible.map(describe).join(" · ")
+    : video.available && !video.stale ? "No current targets." : "Waiting for a live camera feed.";
   if (alert.textContent !== message) alert.textContent = message;
-  alert.hidden = visible.length === 0;
+  document.getElementById("target-panel").classList.toggle("has-targets", visible.length > 0);
+  if (targetSpeech) targetSpeech.update(visible);
+}
+
+function showLcdSelection(lcd) {
+  for (const button of lcdButtons) {
+    button.setAttribute("aria-pressed", String(Number(button.dataset.lcdPane) === lcd.pane));
+  }
+  lcdStatus.textContent = "Selected: " + lcd.label;
+}
+
+async function selectLcdPane(pane) {
+  if (lcdPending) return;
+  lcdPending = true;
+  lcdRequestVersion += 1;
+  lcdError.hidden = true;
+  for (const button of lcdButtons) button.disabled = true;
+  lcdStatus.textContent = "Selecting LCD screen…";
+  try {
+    const response = await fetch("/api/lcd", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({pane}),
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!response.ok) throw new Error("LCD request failed: " + response.status);
+    showLcdSelection(await response.json());
+  } catch (error) {
+    lcdStatus.textContent = "LCD selection unconfirmed.";
+    lcdError.textContent = "Could not confirm the LCD selection. Try again.";
+    lcdError.hidden = false;
+  } finally {
+    // Also discard polls started while this command was being saved.
+    lcdRequestVersion += 1;
+    lcdPending = false;
+    for (const button of lcdButtons) button.disabled = false;
+  }
 }
 
 async function refresh() {
-  const response = await fetch("/api/data", {cache: "no-store"});
+  const lcdVersion = lcdRequestVersion;
+  const response = await fetch("/api/data", {cache: "no-store", signal: AbortSignal.timeout(5000)});
   if (!response.ok) throw new Error("Request failed: " + response.status);
   const data = await response.json();
+  // Ignore a poll started before a newer button selection.
+  if (!lcdPending && lcdVersion === lcdRequestVersion) showLcdSelection(data.lcd);
 
   const video = data.video;
   setBadge("video-state",
@@ -79,6 +125,7 @@ async function loop() {
   try {
     await refresh();
   } catch (error) {
+    if (!lcdPending) lcdStatus.textContent = "LCD controls: connection lost.";
     showDetectionAlert([], {available: false, stale: true});
     setBadge("air-state", "Connection lost", "error");
     setBadge("video-state", "Connection lost", "error");
@@ -87,9 +134,22 @@ async function loop() {
 }
 
 if (page === "dashboard") {
+  targetSpeech = new TargetSpeech(document.getElementById("voice-status"));
+  for (const button of lcdButtons) {
+    button.addEventListener("click", () => selectLcdPane(Number(button.dataset.lcdPane)));
+  }
   loop();
 
   const frame = document.getElementById("live-video");
+  const placeholder = document.getElementById("camera-placeholder");
+  frame.addEventListener("load", () => {
+    frame.hidden = false;
+    placeholder.hidden = true;
+  });
+  frame.addEventListener("error", () => {
+    frame.hidden = true;
+    placeholder.hidden = false;
+  });
   setInterval(() => {
     frame.src = "/live.jpg?t=" + Date.now();
   }, 100);

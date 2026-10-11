@@ -7,18 +7,24 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body data-page="{{ page }}">
-  <nav>
+  <nav aria-label="Main navigation">
+    {% if page == 'dashboard' %}
+    <div class="dashboard-brand"><span class="brand-mark" aria-hidden="true">12</span><span>GROUP 12<small>PAYLOAD MONITOR</small></span></div>
+    {% endif %}
     {% for key, path, label in [('dashboard','/','Dashboard'),
                                 ('charts','/charts','Air Quality Charts'),
                                 ('targets','/targets','Identified Targets'),
                                 ('logs','/logs','Logs')] %}
-      <a href="{{ path }}" {% if page == key %}class="active"{% endif %}>{{ label }}</a>
+      <a href="{{ path }}" {% if page == key %}class="active" aria-current="page"{% endif %}>{{ label }}</a>
     {% endfor %}
   </nav>
 
   <main>{% block content %}{% endblock %}</main>
 
   <script src="{{ url_for('static', filename='vendor/chart.umd.min.js') }}"></script>
+  {% if page == 'dashboard' %}
+  <script src="{{ url_for('static', filename='target-speech.js') }}"></script>
+  {% endif %}
   <script src="{{ url_for('static', filename='app.js') }}"></script>
 </body>
 </html>
