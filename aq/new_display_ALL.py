@@ -1,21 +1,24 @@
-"""Display the LCD screen selected from the WVI dashboard."""
+"""Select the LCD screen using the proximity sensor or WVI dashboard."""
 
 import json
 import subprocess
 import time
-from collections import deque
-from urllib.request import urlopen
+from urllib.request import Request, urlopen
 
 from PIL import Image, ImageDraw, ImageFont
 
 
+DETECTED = 1  # Finger detection threshold; adjust for the sensor if needed.
+
 FRAME_PATH = "/dev/shm/uav/liveimage.jpg"
 DATA_URL = "http://127.0.0.1:8000/api/data"
+LCD_URL = "http://127.0.0.1:8000/api/lcd"
 
 # These values match the dashboard's /api/lcd control.
 IP_ADDRESS = 1
 TEMPERATURE = 2
 VIDEO_FEED = 3
+DEFAULT = 4
 
 
 def get_display_data(current_pane):
@@ -48,6 +51,22 @@ def get_display_data(current_pane):
     except (ValueError, KeyError, TypeError):
         temperature = "Unavailable"
     return current_pane, temperature
+
+
+def update_website_pane(pane):
+    """Save a sensor selection so the website and LCD stay in sync."""
+    request = Request(
+        LCD_URL,
+        data=json.dumps({"pane": pane}).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urlopen(request, timeout=0.5):
+            pass
+    except OSError:
+        # Local switching still works offline; polling resyncs when WVI returns.
+        print("Could not save LCD selection to WVI", flush=True)
 
 
 def get_cpu_temperature():
@@ -92,6 +111,13 @@ def main():
     # Only the LCD process needs the Raspberry Pi display driver.
     import st7735
 
+    # Support the same LTR559 library versions as AQFunctions.py.
+    try:
+        from ltr559 import LTR559
+        ltr559 = LTR559()
+    except ImportError:
+        import ltr559
+
     display = st7735.ST7735(
         port=0,
         cs=1,
@@ -104,23 +130,41 @@ def main():
 
     size = (display.width, display.height)
     font = ImageFont.load_default()
-    cpu_temps = deque(maxlen=5)  # Automatically keep only the five latest readings.
-    pane = IP_ADDRESS
+    cpu_temps = [get_cpu_temperature()] * 5
+    LCD_PANE = IP_ADDRESS
     temperature = "Unavailable"
     ip = "No IP"
     next_update = 0.0
+    finger_pressed = False
+    last_press = -0.5
 
     while True:
         # Poll the website's selection, temperature and IP once per second.
         if time.monotonic() >= next_update:
-            pane, temperature = get_display_data(pane)
+            LCD_PANE, temperature = get_display_data(LCD_PANE)
             ip = get_ip()
             next_update = time.monotonic() + 1
 
-        cpu_temps.append(get_cpu_temperature())
+        cpu_temps = cpu_temps[1:] + [get_cpu_temperature()]
         valid_temps = [value for value in cpu_temps if value is not None]
         cpu_temp = sum(valid_temps) / len(valid_temps) if valid_temps else None
-        image = render_screen(pane, size, font, ip, temperature, cpu_temp)
+
+        # Advance once per press, with a short debounce for noisy readings.
+        try:
+            prox = ltr559.get_proximity()
+        except OSError:
+            prox = None  # Keep the press state during a temporary sensor error.
+        if prox is not None:
+            now = time.monotonic()
+            if prox >= DETECTED and not finger_pressed and now - last_press >= 0.5:
+                LCD_PANE += 1
+                if LCD_PANE == DEFAULT:
+                    LCD_PANE = IP_ADDRESS
+                update_website_pane(LCD_PANE)
+                last_press = now
+            finger_pressed = prox >= DETECTED
+
+        image = render_screen(LCD_PANE, size, font, ip, temperature, cpu_temp)
         display.display(image)
         time.sleep(0.2)
 
