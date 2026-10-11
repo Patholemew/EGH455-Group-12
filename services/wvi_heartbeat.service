@@ -1,0 +1,14 @@
+[Unit]
+Description=Heartbeat service
+After=wvi.service
+
+[Service]
+User=egh455-g12
+WorkingDirectory=/home/egh455-g12/EGH455-Group-12/wvi
+ExecStart=/home/egh455-g12/EGH455-Group-12/.venv/bin/python heartbeat.py
+Environment=PYTHONUNBUFFERED=1
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

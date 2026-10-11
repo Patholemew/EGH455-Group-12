@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% macro icon(name) -%}
+<svg class="panel-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+  {% if name == 'camera' %}<rect x="3" y="6" width="13" height="12" rx="3"/><path d="m16 10 5-3v10l-5-3"/>
+  {% elif name == 'sensor' %}<path d="M2 12h5l3-8 4 16 3-8h5"/>
+  {% elif name == 'target' %}<path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5M8 12h8"/>
+  {% elif name == 'lcd' %}<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8m-4-4v4"/>
+  {% endif %}
+</svg>
+{%- endmacro %}
+{% block content %}
+<h1 class="visually-hidden">Dashboard</h1>
+<div class="dashboard-grid">
+  <section class="panel sensor-panel" aria-labelledby="sensor-heading">
+    <div class="panel-heading">
+      <h2 id="sensor-heading">{{ icon('sensor') }} Environment</h2>
+      <span id="air-state" class="badge" role="status">Waiting</span>
+    </div>
+    <p id="sensor-updated" class="panel-note">Waiting for sensor readings.</p>
+    <div class="readings environment-readings">
+      <div class="reading">
+        <span>Temperature</span>
+        <div class="metric-value"><strong id="temperature_c">—</strong><small>°C</small></div>
+      </div>
+      <div class="reading">
+        <span>Humidity</span>
+        <div class="metric-value"><strong id="humidity_pct">—</strong><small>%</small></div>
+      </div>
+      <div class="reading">
+        <span>Pressure</span>
+        <div class="metric-value"><strong id="pressure_hpa">—</strong><small>hPa</small></div>
+      </div>
+      <div class="reading">
+        <span>Light</span>
+        <div class="metric-value"><strong id="light_lux">—</strong><small>lux</small></div>
+      </div>
+    </div>
+
+    <div class="gas-section">
+      <div class="sensor-subheading"><h3>Gas sensor resistance</h3><span>kΩ</span></div>
+      <div class="readings gas-readings">
+        <div class="reading"><span>Reducing</span><strong id="gas_reducing">—</strong></div>
+        <div class="reading"><span>Oxidising</span><strong id="gas_oxidising">—</strong></div>
+        <div class="reading"><span>Ammonia</span><strong id="gas_ammonia">—</strong></div>
+      </div>
+      <a class="panel-link" href="/charts">View sensor history ↗</a>
+    </div>
+  </section>
+
+  <section class="panel video-panel" aria-labelledby="camera-heading">
+    <div class="panel-heading">
+      <h2 id="camera-heading">{{ icon('camera') }} Live camera</h2>
+      <span id="video-state" class="badge" role="status">Waiting</span>
+    </div>
+    <div class="camera-stage">
+      <div id="camera-placeholder" class="camera-placeholder">{{ icon('camera') }}<strong>Waiting for camera</strong><span>The latest annotated frame will appear here.</span></div>
+      <img id="live-video" alt="Latest annotated camera frame" hidden>
+    </div>
+    <div class="camera-footer"><span>Annotated camera feed</span><a class="panel-link" href="/targets">View identified targets ↗</a></div>
+  </section>
+
+  <section id="target-panel" class="panel target-panel" aria-labelledby="target-heading">
+    <div class="panel-heading"><h2 id="target-heading">{{ icon('target') }} Target detection</h2></div>
+    <p id="detection-alert" class="detection-alert" role="status">Waiting for a live camera feed.</p>
+  </section>
+
+  <section class="panel lcd-panel" aria-labelledby="lcd-heading">
+    <div class="panel-heading">
+      <h2 id="lcd-heading">{{ icon('lcd') }} Onboard LCD</h2>
+    </div>
+    <p class="panel-note">Choose the screen shown on the onboard LCD.</p>
+    <div class="control-buttons" role="group" aria-label="LCD screen">
+      {% for pane, label in lcd_panes.items() %}
+      <button type="button" data-lcd-pane="{{ pane }}" aria-pressed="false">{{ label }}</button>
+      {% endfor %}
+    </div>
+    <p id="lcd-status" class="panel-note" role="status">Loading LCD selection…</p>
+    <p id="lcd-error" class="lcd-error" role="alert" hidden></p>
+  </section>
+</div>
+<p id="voice-status" class="panel-note voice-status" role="status" hidden></p>
+{% endblock %}

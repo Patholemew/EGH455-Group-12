@@ -5,7 +5,7 @@ from pathlib import Path
 import sys
 from threading import Thread
 import time
-
+import os
 import cv2
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -19,6 +19,7 @@ from gauge_reader import process_gauge
 from pose import PoseEstimator
 from output import print_results
 from wvi_output import prepare_wvi_output
+from wvi_client import send_aip_output
 from datetime import datetime, timezone
 
 # Load Object Detection Model
@@ -32,9 +33,8 @@ MODEL = (
 
 CONFIDENCE = 0.10 # Minimum confidence for object detection
 DRILL_THRESHOLD = 2.0 # Gauge measurement below which drilling starts
-SHOW_DISPLAY = True # Whether to show the annotated frame in a window. Set to False for headless operation.
+SHOW_DISPLAY = True # Whether to show the annotated frame in a window. Keep False for the headless systemd service.
 PRINT_RESULTS = True # Whether to print detection results to the console. Set to False for headless operation.
-
 #---------------------------------------------------------
 
 def main(argv=None):
@@ -181,8 +181,10 @@ def main(argv=None):
                 )
 
                 # Temporary placeholders until WVI communication exists
-                SEND2SERVER = aip_data
-                IMAGE2SERVER = aip_image
+                try:
+                    send_aip_output(aip_data, aip_image)
+                except:
+                    print(f"WVI output failure")
 
                 # ---------------------------------------------------------
                 # Display
@@ -206,7 +208,8 @@ def main(argv=None):
             if drill_thread is not None:
                 drill_thread.join()
 
-            cv2.destroyAllWindows()
+            if SHOW_DISPLAY:
+                cv2.destroyAllWindows()
 
 
 if __name__ == "__main__":

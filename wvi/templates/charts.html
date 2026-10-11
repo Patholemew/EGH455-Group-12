@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Air Quality Charts{% endblock %}
+{% block content %}
+<h1>Air quality charts</h1>
+
+<div class="range-buttons">
+  <button data-minutes="1">1 MINUTE</button>
+  <button data-minutes="5">5 MINUTES</button>
+  <button class="active" data-minutes="10">10 MINUTES</button>
+  <button data-minutes="all">ALL TIME</button>
+</div>
+
+<div class="chart-grid">
+  <section class="panel">
+    <h2 id="title-temperature_c">Temperature</h2>
+    <div class="chart-box"><canvas id="chart-temperature_c"></canvas></div>
+  </section>
+  <section class="panel">
+    <h2 id="title-pressure_hpa">Pressure</h2>
+    <div class="chart-box"><canvas id="chart-pressure_hpa"></canvas></div>
+  </section>
+  <section class="panel">
+    <h2 id="title-humidity_pct">Humidity</h2>
+    <div class="chart-box"><canvas id="chart-humidity_pct"></canvas></div>
+  </section>
+  <section class="panel">
+    <h2 id="title-light_lux">Light</h2>
+    <div class="chart-box"><canvas id="chart-light_lux"></canvas></div>
+  </section>
+</div>
+{% endblock %}

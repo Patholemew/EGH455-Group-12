@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<h1>System logs</h1>
+
+<div class="range-buttons">
+  <button class="active" data-source="all">ALL</button>
+  <button data-source="WVI">WVI</button>
+  <button data-source="AQ">AQ</button>
+  <button data-source="AIP">AIP</button>
+</div>
+
+<section class="panel">
+  <div class="readings">
+    <div class="reading">
+      <span>Heartbeat span</span><strong id="heartbeat-span">—</strong><small>since first check</small>
+    </div>
+    <div class="reading">
+      <span>Successful checks</span><strong id="heartbeat-count">—</strong><small>one per 10 s</small>
+    </div>
+  </div>
+</section>
+
+<section class="panel">
+  <table>
+    <thead>
+      <tr><th>Timestamp</th><th>Source</th><th>Message</th></tr>
+    </thead>
+    <tbody id="logs-body"></tbody>
+  </table>
+</section>
+{% endblock %}
