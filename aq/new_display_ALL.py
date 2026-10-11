@@ -135,8 +135,6 @@ def main():
     temperature = "Unavailable"
     ip = "No IP"
     next_update = 0.0
-    finger_pressed = False
-    last_press = -0.5
 
     while True:
         # Poll the website's selection, temperature and IP once per second.
@@ -149,20 +147,16 @@ def main():
         valid_temps = [value for value in cpu_temps if value is not None]
         cpu_temp = sum(valid_temps) / len(valid_temps) if valid_temps else None
 
-        # Advance once per press, with a short debounce for noisy readings.
+        # Advance each loop while the sensor detects a finger.
         try:
             prox = ltr559.get_proximity()
         except OSError:
-            prox = None  # Keep the press state during a temporary sensor error.
-        if prox is not None:
-            now = time.monotonic()
-            if prox >= DETECTED and not finger_pressed and now - last_press >= 0.5:
-                LCD_PANE += 1
-                if LCD_PANE == DEFAULT:
-                    LCD_PANE = IP_ADDRESS
-                update_website_pane(LCD_PANE)
-                last_press = now
-            finger_pressed = prox >= DETECTED
+            prox = None
+        if prox is not None and prox >= DETECTED:
+            LCD_PANE += 1
+            if LCD_PANE == DEFAULT:
+                LCD_PANE = IP_ADDRESS
+            update_website_pane(LCD_PANE)
 
         image = render_screen(LCD_PANE, size, font, ip, temperature, cpu_temp)
         display.display(image)
