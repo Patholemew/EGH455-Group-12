@@ -1,10 +1,21 @@
 import time
-from bme280 import BME280
+import random
 from smbus2 import SMBus
 import numpy as np
-# Create a single shared SMBus instance (just like display_ALL.py)
-bus = SMBus(1)
 
+# Safely catch global I2C/Sensor availability flags
+try:
+    # Create a single shared SMBus instance (just like display_ALL.py)
+    bus = SMBus(1)
+    from bme280 import BME280
+    bme280 = BME280(i2c_dev=bus) # BME280 temperature/pressure/humidity sensor using the shared bus
+    from enviroplus import gas
+    HARDWARE_ONLINE = True
+except Exception as e:
+    # Safe fallback if I2C lane is missing during file import
+    HARDWARE_ONLINE = False
+    bme280 = None
+    gas = None
 # Weather and Light
 # Safely import the module without forcing immediate hardware connection
 try:
@@ -24,21 +35,12 @@ def get_ltr559():
         except Exception as e:
             print(f"Warning: Could not initialize LTR559 sensor: {e}")
     return _ltr559_instance
-    
-# Gas readings
-from enviroplus import gas
 
-# BME280 temperature/pressure/humidity sensor using the shared bus
-bme280 = BME280(i2c_dev=bus)
-
-# Tuning factor for compensation. Decrease this number to adjust the
-# temperature down, and increase to adjust up
-factor = 2.25
-
-CALIBRATION_TIME = 10 #ten minutes required until calribation of gases
 # Get average CPU Temperature
     # Run function with cpu_temps_record array to keep cpu temps averaging. Initialise empty cpu_temps_record array before running in loop.
 def get_temperature(cpu_temps_record):
+    if not HARDWARE_ONLINE:
+        raise OSError("I2C connection or BM280 sensor not available!")
     with open("/sys/class/thermal/thermal_zone0/temp", "r") as f:
             cpu_temp = f.read()
             cpu_temp = int(cpu_temp) / 1000.0
@@ -57,6 +59,8 @@ class gases:
 
 # Get all other sensor readings
 def get_readings():
+    if not HARDWARE_ONLINE:
+        raise OSError("I2C connection or Gas sensor platform not available!")        
     ltr559 = get_ltr559()
     
     if ltr559  is not None:
@@ -71,12 +75,10 @@ def get_readings():
             light = 0  # Fallback value if I2C glitches mid-run
     else:
         light = 0
+        Print("I2C connection or LTR599 sensor not initialised!")
 
-    # variable = "humidity" | unit = "%"
-    humidity = bme280.get_humidity()
-    
-    # variable = "pressure" | unit = "hPa"
-    pressure = bme280.get_pressure()
+    humidity = bme280.get_humidity()    # variable = "humidity" | unit = "%"
+    pressure = bme280.get_pressure()    # variable = "pressure" | unit = "hPa"
     
     # variables = "gases" | unit = "kO"
     gases = gas.read_all()
@@ -115,6 +117,9 @@ def simulate_readings(cpu_temps_record):
 
     return env_temp, cpu_temp, humidity, light, gases_mock, pressure
 
+# Tuning factor for compensation. Decrease this number to adjust the
+factor = 2.25 # temperature down, and increase to adjust up
+CALIBRATION_TIME = 10 #ten minutes required until calribation of gases
 
 # Class to run all sensor data immediately
 class readings:
@@ -179,7 +184,7 @@ class readings:
             #Historical calibration
             convert2ppm_prev(self) #updates previous values to be in ppm
 
-    def record_data(self, SIMULATE = FALSE):
+    def record_data(self, SIMULATE = False):
         """Runs functions to record the sensor data immediately"""
         if SIMULATE:
             # Simulate if SIMULATE flag is true (implies hardware is broken still)
