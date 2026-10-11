@@ -9,6 +9,8 @@ from PIL import Image, ImageDraw, ImageFont
 
 
 DETECTED = 1  # Finger detection threshold; adjust for the sensor if needed.
+LCD_ROTATION = 270 # Change to 90 if using alternative payload case which flips the LCD panel
+#LCD_ROTATION = 90 # Variable here just to make changing rotation easier
 
 FRAME_PATH = "/dev/shm/uav/liveimage.jpg"
 DATA_URL = "http://127.0.0.1:8000/api/data"
@@ -123,7 +125,7 @@ def main():
         cs=1,
         dc=9,
         backlight=12,
-        rotation=270,
+        rotation=LCD_ROTATION,
         spi_speed_hz=10000000,
     )
     display.begin()
@@ -135,6 +137,8 @@ def main():
     temperature = "Unavailable"
     ip = "No IP"
     next_update = 0.0
+
+    pressing_sensor = False    # state tracking variable for debouncing proximity inputs
 
     while True:
         # Poll the website's selection, temperature and IP once per second.
@@ -153,10 +157,14 @@ def main():
         except OSError:
             prox = None
         if prox is not None and prox >= DETECTED:
-            LCD_PANE += 1
-            if LCD_PANE == DEFAULT:
-                LCD_PANE = IP_ADDRESS
-            update_website_pane(LCD_PANE)
+            if not pressing_sensor:
+                LCD_PANE += 1
+                if LCD_PANE == DEFAULT:
+                    LCD_PANE = IP_ADDRESS
+                update_website_pane(LCD_PANE)
+                pressing_sensor = True #Locks interaction until stop pressing sensor
+        else:
+            pressing_sensor = False #Resets interaction trigger clearance
 
         image = render_screen(LCD_PANE, size, font, ip, temperature, cpu_temp)
         display.display(image)
