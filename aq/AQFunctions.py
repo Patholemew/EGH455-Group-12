@@ -77,7 +77,7 @@ def get_readings():
             light = 0  # Fallback value if I2C glitches mid-run
     else:
         light = 0
-        Print("I2C connection or LTR599 sensor not initialised!")
+        print("I2C connection or LTR599 sensor not initialised!")
 
     humidity = bme280.get_humidity()    # variable = "humidity" | unit = "%"
     pressure = bme280.get_pressure()    # variable = "pressure" | unit = "hPa"
@@ -196,6 +196,7 @@ class readings:
                 humidity, light, gases, pressure = get_readings()
             except Exception as e:
                 print(f"Hardware read failed ({e}).")
+                return
 
         if (self.timestamp and (self.timestamp[-1] - self.start_time) > CALIBRATION_TIME*60) and self.CALIBRATED == False:  #greater than ten minutes (in seconds) activate only once
             #Expected time for gas sensing to stablise (calibration window)
@@ -203,6 +204,7 @@ class readings:
             self.gas_baseline.oxidising = gases.oxidising
             self.gas_baseline.reducing = gases.reducing
             self.gas_baseline.nh3 = gases.nh3
+            self.save_calibration()
 
         self.cpu_temps_record.append(cpu_temp)
         self.env_temps_record.append(env_temp)
@@ -248,12 +250,12 @@ class readings:
     def print_data(self):
         """Prints most recent data to the Terminal"""
         cpu_temp, env_temp, oxidising, reducing, nh3, light, humidity, pressure, timestamp = self.recent_readings()
-        print(f'''        TIME: {timestamp}\n
+        print(f'''        TIME: {timestamp-self.start_time}\n
         Temperature: {env_temp} {self.temp_unit}\n
         Pressure:    {pressure} {self.pressure_unit}\n
         Humidity:    {humidity} {self.humidity_unit}\n
         Light:       {light} {self.light_unit}\n''')
-        if timestamp > CALIBRATION_TIME*60:
+        if (timestamp-self.start_time) > CALIBRATION_TIME*60:
             print(f'''      Oxidised:    {oxidising} {self.gas_unit}\n
         Reduced:     {reducing} {self.gas_unit}\n
         nh3:         {nh3} {self.gas_unit}\n''')
@@ -261,10 +263,11 @@ class readings:
             print(f'''      Oxidised:    {oxidising} {self.resistive_unit}\n
         Reduced:     {reducing} {self.resistive_unit}\n
         nh3:         {nh3} {self.resistive_unit}\n''')
+            
     def save_calibration(self):
         data = {"Oxidised_Cal": self.gas_baseline.oxidising, 
                 "Reduced_Cal": self.gas_baseline.reducing,
-                "NH3_Cal": self.gas_baseline.reducing
+                "NH3_Cal": self.gas_baseline.nh3
                }
         with open("save_calibration.json", "w", encoding = "utf-8") as file:
             json.dump(data, file, indent=4)

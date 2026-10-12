@@ -35,7 +35,7 @@ def collect_and_publish(sensor_readings, warmup_seconds, args, SIMULATE, ready_a
             sensor_readings.print_data()    #For Testing, prints to terminal
         if args.HistTest and len(sensor_readings.timestamp)==RECALL_AFTER:
             print(f'''__Historical Test - First Reading Recollection__        
-            TIME:        {sensor_readings.timestamp[0]}\n
+            TIME:        {sensor_readings.timestamp[0]-sensor_readings.start_time}\n
             Temperature: {sensor_readings.env_temps_record[0]} {sensor_readings.temp_unit}\n
             Pressure:    {sensor_readings.pressure[0]} {sensor_readings.pressure_unit}\n
             Humidity:    {sensor_readings.humidity[0]} {sensor_readings.humidity_unit}\n
