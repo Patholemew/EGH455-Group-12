@@ -2,6 +2,8 @@ import time
 import random
 from smbus2 import SMBus
 import numpy as np
+import os
+import json
 
 # Safely catch global I2C/Sensor availability flags
 try:
@@ -140,9 +142,7 @@ class readings:
         self.humidity = []
         self.pressure = []
         self.timestamp = []
-        self.CALIBRATED = False
-        self.PREV_PPM = False    #checks if the previous recorded data has been converted to ppm based on the baseline
-        self.gas_baseline = GasBaseline()
+        self.gas_baseline, self.CALIBRATED, self.PREV_PPM = retrieve_calibration()
     def convert2ppm_prev(self):    #ensures WVI can convert previous data in storage to ppm values assuming stored in readings class
         print("Calibrating Historical Gas Values...\n")
         oxy_const = 1/0.9804
@@ -259,7 +259,38 @@ class readings:
         print(f'''Oxidised:    {oxidising} {self.resistive_unit}\n
         Reduced:     {reducing} {self.resistive_unit}\n
         nh3:         {nh3} {self.resistive_unit}\n''')
-        
+    def save_calibration(self):
+        data = {"Oxidised_Cal": self.gas_baseline.oxidising, 
+                "Reduced_Cal": self.gas_baseline.reducing,
+                "NH3_Cal": self.gas_baseline.reducing
+               }
+        with open("save_calibration.json", "w", encoding-"utf-8") as file:
+            json.dump(data, file, indent=4)
+        print("Data saved successfully!")
+
+    def retrieve_calibration(self):
+        file_name = "save_calibration.json"
+        gas_cal = GasBaseline()
+        calibrated = False
+        prev_ppm = False
+        if os.path.exists(file_name):
+            print("Found existing file!")
+
+            #Read and Load the data
+            with open(file_name, "r", encoding = "utf-8") as file:
+                loaded_data = json.load(file)
+                Oxidised_Cal = loaded.get("Oxidised_Cal")
+                Reduced_Cal = loaded.get("Reduced_Cal")
+                NH3_Cal = loaded.get("NH3_Cal")
+                gas_cal.oxidising = Oxidised_Cal
+                gas_cal.reducing = Reduced_Cal
+                gas_cal.nh3 = NH3_Cal
+                calibrated = True
+                #checks if the previous recorded data has been converted to ppm based on the baseline
+                prev_ppm = True #because this is the initialisation step so there shouldn't be anything earlier than this.
+        return gas_cal, calibrated, prev_ppm
+
+
 
 
 
