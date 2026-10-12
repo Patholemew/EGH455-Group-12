@@ -11,6 +11,7 @@ from PIL import Image, ImageDraw, ImageFont
 FRAME_PATH = "/dev/shm/uav/liveimage.jpg"
 DATA_URL = "http://127.0.0.1:8000/api/data"
 
+LCD_ROTATION = 90 # was 270 if using alternative payload case which flips the LCD panel
 
 def get_temperature():
     try:
@@ -47,7 +48,7 @@ display = st7735.ST7735(
     cs=1,
     dc=9,
     backlight=12,
-    rotation=270,
+    rotation=LCD_ROTATION,
     spi_speed_hz=10000000
 )
 display.begin()
