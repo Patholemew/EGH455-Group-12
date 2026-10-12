@@ -213,7 +213,8 @@ class readings:
         self.light.append(light)
         self.humidity.append(humidity)
         self.pressure.append(pressure)
-        self.timestamp.append(time.time()-self.start_time)
+        # self.timestamp.append(time.time()-self.start_time)
+        self.timestamp.append(time.time())
 
 
     def recent_readings(self):
