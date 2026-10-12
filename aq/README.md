@@ -21,4 +21,14 @@ python3 aq/aq_main.py
 Before running `display_ALL.py`, stop any other program using the LCD. If the IP
 display service is running, stop it with `sudo systemctl stop display_ip.service`.
 
+Both LCD scripts require Pillow for image loading, resizing, fonts, and text
+drawing. Install this image dependency into the project environment from the
+repository root (the hardware drivers must also be installed):
+
+```bash
+.venv/bin/python -m pip install -r aq/requirements-display.txt
+```
+
+Pillow provides the `PIL` import; it is a runtime dependency of the LCD scripts.
+
 Add subsystem startup logic to `main()` in `aq_main.py` as it is developed.

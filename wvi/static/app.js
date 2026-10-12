@@ -165,6 +165,10 @@ if (page === "charts") {
   const charts = {};
   let range = "10";
 
+  function formatReading(value) {
+    return Number.isFinite(value) ? value.toFixed(2) : "—";
+  }
+
   function makeChart(key) {
     return new Chart(document.getElementById("chart-" + key), {
       type: "line",
@@ -175,8 +179,16 @@ if (page === "charts") {
         responsive: true,
         maintainAspectRatio: false,
         animation: false,
-        plugins: {legend: {display: false}},
-        scales: {x: {ticks: {maxTicksLimit: 6, maxRotation: 0}}},
+        plugins: {
+          legend: {display: false},
+          tooltip: {callbacks: {
+            label: context => chartLabels[key] + ": " + formatReading(context.parsed.y),
+          }},
+        },
+        scales: {
+          x: {ticks: {maxTicksLimit: 6, maxRotation: 0}},
+          y: {ticks: {callback: value => formatReading(Number(value))}},
+        },
       },
     });
   }
@@ -200,7 +212,7 @@ if (page === "charts") {
       chart.update("none");
 
       document.getElementById("title-" + key).textContent =
-        latest ? chartLabels[key] + ": " + latest[key] : chartLabels[key];
+        latest ? chartLabels[key] + ": " + formatReading(latest[key]) : chartLabels[key];
     }
   }
 

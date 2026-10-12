@@ -50,14 +50,16 @@ main { padding: 16px; }
 .badge.stale { background: #f2d9a8; }
 .badge.error { background: #d70909; }
 
-.range-buttons { display: flex; gap: 8px; margin-bottom: 16px; }
+.range-buttons { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; }
 .range-buttons button {
-  padding: 6px 14px; border: 1px solid #cdd6de;
-  background: #ffffff; border-radius: 4px; cursor: pointer;
+  min-height: 40px; padding: 9px 14px; border: 1px solid #dbe4e9;
+  background: #ffffff; color: #607582; border-radius: 7px;
+  font: 500 12px/1.5 system-ui, -apple-system, sans-serif; cursor: pointer;
 }
-.range-buttons button.active { background: #c9d9e6; font-weight: 600; }
+.range-buttons button.active { background: #087d80; color: #ffffff; border-color: #087d80; }
+.range-buttons button:hover { border-color: #98bebf; }
 
-.chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.chart-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .chart-box { position: relative; height: 220px; }
 .chart-box canvas { position: absolute; inset: 0; }
 
@@ -68,16 +70,16 @@ th { font-size: 13px; color: #5a6b7a; }
 #live-video { display: block; width: 100%; max-width: 640px; background: #102536; }
 .thumb { display: block; width: 120px; height: auto; border-radius: 3px; }
 
-/* Dashboard */
-body[data-page="dashboard"] { background: #f1f4f6; color: #172c38; }
-body[data-page="dashboard"] nav { align-items: center; gap: 6px; padding: 18px 28px; border-color: #dbe4e9; }
-body[data-page="dashboard"] nav a { flex: none; border: 0; border-radius: 7px; padding: 9px 12px; color: #607582; font-size: 13px; }
-body[data-page="dashboard"] nav a.active { color: #087d80; background: #edf5f5; }
+/* Shared application layout */
+body { background: #f1f4f6; color: #172c38; }
+body nav { align-items: center; gap: 6px; padding: 18px 28px; border-color: #dbe4e9; }
+body nav a { flex: none; border: 0; border-radius: 7px; padding: 9px 12px; color: #607582; font-size: 13px; }
+body nav a.active { color: #087d80; background: #edf5f5; }
 .dashboard-brand { display: flex; align-items: center; gap: 10px; margin-right: auto; font-size: 14px; font-weight: 650; white-space: nowrap; }
 .dashboard-brand small { display: block; color: #607582; font-size: 10px; font-weight: 500; letter-spacing: 1.5px; margin-top: 3px; }
 .brand-mark { display: grid; place-items: center; width: 34px; height: 34px; background: #087d80; color: #fff; border-radius: 9px; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-body[data-page="dashboard"] main {
+body main {
   max-width: 1220px;
   margin: 0 auto;
   padding: 28px;
@@ -90,17 +92,17 @@ body[data-page="dashboard"] main {
   grid-template-rows: auto auto 1fr;
   gap: 16px;
 }
-.dashboard-grid * { box-sizing: border-box; }
+main * { box-sizing: border-box; }
 .dashboard-grid [hidden] { display: none !important; }
-.dashboard-grid .panel {
+.panel {
   min-width: 0;
-  margin: 0;
+  margin: 0 0 16px;
   padding: 20px;
   border-radius: 14px;
   border-color: #dbe4e9;
 }
-.dashboard-grid .panel-heading { gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
-.dashboard-grid h2 { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 14px; font-weight: 650; }
+.panel-heading { gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+.panel h2 { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 14px; font-weight: 650; }
 .panel-icon { width: 18px; height: 18px; flex-shrink: 0; color: #087d80; }
 .dashboard-grid .badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 9px; font-weight: 600; white-space: nowrap; color: #526772; background: #eef2f5; }
 .dashboard-grid .badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
@@ -129,9 +131,9 @@ body[data-page="dashboard"] main {
 .sensor-panel { grid-area: sensors; display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 10px 24px; }
 .sensor-panel .panel-heading { grid-column: 1 / -1; margin-bottom: 0; }
 .sensor-panel > .panel-note { grid-column: 1 / -1; margin: 0 0 6px; }
-.dashboard-grid .readings { display: grid; gap: 10px; margin: 0; }
+.readings { display: grid; gap: 10px; margin: 0; }
 .dashboard-grid .environment-readings { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-.dashboard-grid .reading {
+.reading {
   min-width: 0;
   padding: 14px 12px;
   gap: 8px;
@@ -139,8 +141,8 @@ body[data-page="dashboard"] main {
   background: #f1f4f6;
   justify-content: center;
 }
-.dashboard-grid .reading > span { color: #607582; font-size: 12px; }
-.dashboard-grid .reading strong { font-size: clamp(22px, 2.2vw, 28px); font-weight: 550; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; line-height: 1.3; }
+.reading > span { color: #607582; font-size: 12px; }
+.reading strong { font-size: clamp(22px, 2.2vw, 28px); font-weight: 550; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; line-height: 1.3; }
 .metric-value { display: flex; align-items: baseline; flex-wrap: wrap; gap: 5px; }
 .metric-value small { font-size: 11px; }
 .gas-section { min-width: 0; }
@@ -168,11 +170,29 @@ body[data-page="dashboard"] main {
 }
 .control-buttons button:hover { background: #edf5f5; border-color: #98bebf; }
 .control-buttons button[aria-pressed="true"] { background: #087d80; color: #fff; border-color: #087d80; }
-.control-buttons button:focus-visible, body[data-page="dashboard"] a:focus-visible { outline: 2px solid #087d80; outline-offset: 3px; }
+button:focus-visible, a:focus-visible, .table-scroll:focus-visible { outline: 2px solid #087d80; outline-offset: 3px; }
 .control-buttons button:disabled { opacity: 0.6; cursor: wait; }
 .lcd-panel #lcd-status { margin: 14px 0 0; }
 .lcd-error { color: #a61b1b; font-size: 13px; margin: 10px 0 0; }
 .voice-status { margin: 14px 4px 0; }
+
+
+/* History pages use the same cards, spacing, and controls as the dashboard. */
+.dashboard-grid > .panel, .chart-grid > .panel { margin-bottom: 0; }
+.page-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px; }
+.page-header h1 { margin: 0; font-size: 20px; font-weight: 650; }
+.page-header .panel-note { margin: 6px 0 0; }
+.chart-grid .panel h2 { margin-bottom: 16px; }
+.heartbeat-readings { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.table-scroll { max-width: 100%; overflow-x: auto; border: 1px solid #e3e8ec; border-radius: 8px; }
+.table-scroll table { min-width: 560px; font-size: 13px; line-height: 1.6; }
+.table-scroll th { background: #f1f4f6; color: #607582; font-weight: 600; }
+.table-scroll th, .table-scroll td { padding: 14px 16px; vertical-align: middle; }
+.table-scroll td { overflow-wrap: anywhere; }
+.table-scroll tbody tr:last-child td { border-bottom: 0; }
+.table-scroll tbody tr:hover { background: #f7fafb; }
+.table-scroll a { color: #087d80; }
+.table-scroll .thumb { border-radius: 7px; }
 
 @media (max-width: 1000px) {
   .sensor-panel { grid-template-columns: minmax(0, 1fr); gap: 14px; }
@@ -180,19 +200,24 @@ body[data-page="dashboard"] main {
   .camera-stage { min-height: 260px; }
 }
 @media (max-width: 760px) {
-  body[data-page="dashboard"] nav { flex-wrap: wrap; padding: 16px; }
+  .chart-grid { grid-template-columns: minmax(0, 1fr); }
+  body nav { flex-wrap: wrap; padding: 16px; }
   .dashboard-brand { width: 100%; margin-bottom: 10px; }
-  body[data-page="dashboard"] nav a { flex: 1; padding: 10px 8px; }
-  body[data-page="dashboard"] main { padding: 18px; }
+  body nav a { flex: 1; padding: 10px 8px; }
+  body main { padding: 18px; }
   .dashboard-grid { grid-template-columns: minmax(0, 1fr); grid-template-areas: "sensors" "camera" "targets" "lcd"; grid-template-rows: auto; }
   .control-buttons { flex-direction: row; flex-wrap: wrap; }
   .control-buttons button { flex: 1; }
 }
 @media (max-width: 540px) {
-  body[data-page="dashboard"] main { padding: 14px; }
-  body[data-page="dashboard"] nav a { flex: 1 1 40%; }
+  .page-header { gap: 16px; }
+  .range-buttons { width: 100%; }
+  .range-buttons button { flex: 1 1 auto; }
+  .heartbeat-readings { grid-template-columns: minmax(0, 1fr); }
+  body main { padding: 14px; }
+  body nav a { flex: 1 1 40%; }
   .dashboard-grid { gap: 14px; }
-  .dashboard-grid .panel { padding: 16px; }
+  .panel { padding: 16px; }
   .dashboard-grid .environment-readings { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .camera-stage { min-height: 200px; }
   .control-buttons { flex-direction: column; }

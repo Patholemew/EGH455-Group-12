@@ -1,16 +1,23 @@
 {% extends "base.html" %}
 {% block title %}Identified Targets{% endblock %}
 {% block content %}
-<h1>Identified targets</h1>
+<header class="panel page-header">
+  <div>
+    <h1>Identified targets</h1>
+    <p class="panel-note">Review captured targets and marker positions.</p>
+  </div>
 
-<div class="range-buttons">
+<div class="range-buttons" role="group" aria-label="Target type">
   <button class="active" data-type="all">ALL</button>
   <button data-type="valve">VALVE</button>
   <button data-type="aruco">ARUCO</button>
   <button data-type="gauge">GAUGE</button>
 </div>
+</header>
 
-<section class="panel">
+<section class="panel" aria-labelledby="captures-heading">
+  <div class="panel-heading"><h2 id="captures-heading">Target captures</h2></div>
+  <div class="table-scroll" role="region" aria-label="Target captures" tabindex="0">
   <table>
     <thead>
       <tr>
@@ -22,5 +29,6 @@
     </thead>
     <tbody id="targets-body"></tbody>
   </table>
+  </div>
 </section>
 {% endblock %}

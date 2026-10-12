@@ -1,0 +1,2 @@
+# Image rendering for display_ALL.py and new_display_ALL.py.
+Pillow>=10.1,<13

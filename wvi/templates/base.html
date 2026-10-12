@@ -8,9 +8,7 @@
 </head>
 <body data-page="{{ page }}">
   <nav aria-label="Main navigation">
-    {% if page == 'dashboard' %}
     <div class="dashboard-brand"><span class="brand-mark" aria-hidden="true">12</span><span>GROUP 12<small>PAYLOAD MONITOR</small></span></div>
-    {% endif %}
     {% for key, path, label in [('dashboard','/','Dashboard'),
                                 ('charts','/charts','Air Quality Charts'),
                                 ('targets','/targets','Identified Targets'),

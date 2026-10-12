@@ -1,17 +1,23 @@
 {% extends "base.html" %}
-{% block title %}Dashboard{% endblock %}
+{% block title %}Logs{% endblock %}
 {% block content %}
-<h1>System logs</h1>
+<header class="panel page-header">
+  <div>
+    <h1>System logs</h1>
+    <p class="panel-note">Monitor subsystem activity and connection checks.</p>
+  </div>
 
-<div class="range-buttons">
+<div class="range-buttons" role="group" aria-label="Log source">
   <button class="active" data-source="all">ALL</button>
   <button data-source="WVI">WVI</button>
   <button data-source="AQ">AQ</button>
   <button data-source="AIP">AIP</button>
 </div>
+</header>
 
-<section class="panel">
-  <div class="readings">
+<section class="panel" aria-labelledby="heartbeat-heading">
+  <div class="panel-heading"><h2 id="heartbeat-heading">Connection heartbeat</h2></div>
+  <div class="readings heartbeat-readings">
     <div class="reading">
       <span>Heartbeat span</span><strong id="heartbeat-span">—</strong><small>since first check</small>
     </div>
@@ -21,12 +27,15 @@
   </div>
 </section>
 
-<section class="panel">
+<section class="panel" aria-labelledby="activity-heading">
+  <div class="panel-heading"><h2 id="activity-heading">Recent activity</h2></div>
+  <div class="table-scroll" role="region" aria-label="System logs" tabindex="0">
   <table>
     <thead>
       <tr><th>Timestamp</th><th>Source</th><th>Message</th></tr>
     </thead>
     <tbody id="logs-body"></tbody>
   </table>
+  </div>
 </section>
 {% endblock %}

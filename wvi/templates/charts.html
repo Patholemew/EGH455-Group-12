@@ -1,14 +1,19 @@
 {% extends "base.html" %}
 {% block title %}Air Quality Charts{% endblock %}
 {% block content %}
-<h1>Air quality charts</h1>
+<header class="panel page-header">
+  <div>
+    <h1>Air quality charts</h1>
+    <p class="panel-note">Explore environmental readings over time.</p>
+  </div>
 
-<div class="range-buttons">
+<div class="range-buttons" role="group" aria-label="Chart time range">
   <button data-minutes="1">1 MINUTE</button>
   <button data-minutes="5">5 MINUTES</button>
   <button class="active" data-minutes="10">10 MINUTES</button>
   <button data-minutes="all">ALL TIME</button>
 </div>
+</header>
 
 <div class="chart-grid">
   <section class="panel">
