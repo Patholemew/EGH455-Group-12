@@ -79,7 +79,7 @@ bounding box, and confidence. The WVI output uses only its label and centre.
 
 ## ArUco detection and pose
 
-`aruco.py` uses `cv2.aruco.DICT_5X5_50`. `ARUCO_DICTIONARY` must match the
+`aruco.py` uses `cv2.aruco.DICT_5X5_100`. `ARUCO_DICTIONARY` must match the
 dictionary used to print the physical markers. `detect_aruco(frame)` returns
 `(corners, ids)`, with `ids=None` when no markers are found, without modifying
 the input frame. `draw_aruco(frame, corners, ids)` returns an annotated copy.
