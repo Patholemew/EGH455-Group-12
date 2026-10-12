@@ -16,8 +16,11 @@ python3 aip/aip_main.py
 `aip_main.py` captures frames from the OAK-D Lite using `OakDetector`, reads
 gauges and valves, and displays ArUco outlines and camera pose estimates.
 Requires a connected camera, DepthAI v3, OpenCV (`cv2`)
-with GUI support, `gpiozero`, and a graphical desktop session. The drill servo
+with GUI support for the optional desktop preview, and `gpiozero`. The drill servo
 must be connected to BCM GPIO 12.
+
+The desktop preview is enabled only when `DISPLAY` is set. The systemd service
+runs without a preview window and continues publishing frames to the website.
 
 Set `DRILL_THRESHOLD` in `aip_main.py` to the required gauge measurement. A valid
 measurement crossing above the threshold starts one drill-and-return cycle while
@@ -40,7 +43,7 @@ The main runtime settings are constants near the top of `aip_main.py`:
 | --- | --- | --- |
 | `MODEL` | `aip/models/best_py312_14-09_1828.rvc2.tar.xz` | DepthAI neural-network archive |
 | `CONFIDENCE` | `0.40` | Minimum object-detection confidence |
-| `SHOW_DISPLAY` | `True` | Show the annotated OpenCV window |
+| `SHOW_DISPLAY` | Whether `DISPLAY` is set | Show the annotated OpenCV window in desktop sessions |
 | `PRINT_RESULTS` | `True` | Print detections and measured FPS |
 
 `OakDetector` requests a letterboxed BGR camera stream at the model's input

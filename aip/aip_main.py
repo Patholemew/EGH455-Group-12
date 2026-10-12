@@ -33,7 +33,9 @@ MODEL = (
 
 CONFIDENCE = 0.10 # Minimum confidence for object detection
 DRILL_THRESHOLD = 2.0 # Gauge measurement below which drilling starts
-SHOW_DISPLAY = True # Whether to show the annotated frame in a window. Keep False for the headless systemd service.
+# The systemd service has no X display; opening an OpenCV window there aborts
+# the process after its first frame. Keep the preview for desktop sessions.
+SHOW_DISPLAY = bool(os.environ.get("DISPLAY"))
 PRINT_RESULTS = True # Whether to print detection results to the console. Set to False for headless operation.
 #---------------------------------------------------------
 
