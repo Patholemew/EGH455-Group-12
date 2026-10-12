@@ -9,7 +9,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 
 DETECTED = 1  # Finger detection threshold; adjust for the sensor if needed.
-LCD_ROTATION = 270 # Change to 90 if using alternative payload case which flips the LCD panel
+LCD_ROTATION = 90 # Change to 90 if using alternative payload case which flips the LCD panel
 #LCD_ROTATION = 90 # Variable here just to make changing rotation easier
 
 FRAME_PATH = "/dev/shm/uav/liveimage.jpg"
