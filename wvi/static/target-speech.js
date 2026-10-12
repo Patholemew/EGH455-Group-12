@@ -11,7 +11,8 @@ function spokenTarget(target) {
   if (target.type === "aruco") return "ArUco marker " + target.marker_id + " detected.";
   if (target.type === "gauge") {
     if (!Number.isFinite(target.gauge_reading)) return "Gauge detected. Reading unavailable.";
-    const unit = target.gauge_unit && target.gauge_unit !== "UNIT" ? " " + target.gauge_unit : "";
+    const gaugeUnit = target.gauge_unit === "UNIT" ? "BAR" : target.gauge_unit;
+    const unit = gaugeUnit ? " " + gaugeUnit : "";
     return "Gauge detected. Reading " + target.gauge_reading.toFixed(2) + unit + ".";
   }
   return "Target detected.";

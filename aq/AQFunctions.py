@@ -17,6 +17,7 @@ bme280 = BME280()
 # Tuning factor for compensation. Decrease this number to adjust the
 # temperature down, and increase to adjust up
 factor = 2.25
+CPU_AVERAGE_SAMPLES = 5
 
 
 # Get average CPU Temperature
@@ -25,7 +26,7 @@ def get_temperature(cpu_temps_record):
     with open("/sys/class/thermal/thermal_zone0/temp", "r") as f:
             cpu_temp = f.read()
             cpu_temp = int(cpu_temp) / 1000.0
-    cpu_temps_record = cpu_temps_record[1:] + [cpu_temp]
+    cpu_temps_record = cpu_temps_record[-(CPU_AVERAGE_SAMPLES - 1):] + [cpu_temp]
     avg_cpu_temp = sum(cpu_temps_record) / float(len(cpu_temps_record))
     raw_temp = bme280.get_temperature()
     env_temp = raw_temp - ((avg_cpu_temp - raw_temp) / factor)

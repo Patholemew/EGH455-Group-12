@@ -39,8 +39,9 @@ function describe(row) {
   if (row.type === "aruco") return "ArUco marker " + row.marker_id;
   if (row.type === "gauge") {
     const reading = row.gauge_reading;
+    const unit = row.gauge_unit === "UNIT" ? "BAR" : row.gauge_unit;
     return "Gauge: " + (Number.isFinite(reading) ? reading.toFixed(2) : "N/A")
-      + (row.gauge_unit ? " " + row.gauge_unit : "");
+      + (unit ? " " + unit : "");
   }
   return row.type || "Unknown target";
 }
@@ -173,7 +174,8 @@ if (page === "charts") {
     return new Chart(document.getElementById("chart-" + key), {
       type: "line",
       data: {labels: [], datasets: [{
-        data: [], borderColor: "#007d83", borderWidth: 2, pointRadius: 0, tension: 0.12,
+        data: [], borderColor: "#007d83", borderWidth: 2, pointRadius: 0,
+        tension: 0, spanGaps: false,
       }]},
       options: {
         responsive: true,
@@ -202,13 +204,22 @@ if (page === "charts") {
     if (!response.ok) throw new Error("History request failed");
     const data = await response.json();
 
-    const times = data.rows.map(row => new Date(row.captured_at * 1000).toLocaleTimeString());
+    // A missing sample breaks the line across outages and startup settling.
+    const plotRows = [];
+    for (let i = 0; i < data.rows.length; i++) {
+      const row = data.rows[i];
+      if (i > 0 && row.captured_at - data.rows[i - 1].captured_at > 5) {
+        plotRows.push({captured_at: data.rows[i - 1].captured_at + 1});
+      }
+      plotRows.push(row);
+    }
+    const times = plotRows.map(row => new Date(row.captured_at * 1000).toLocaleTimeString());
     const latest = data.rows.length ? data.rows[data.rows.length - 1] : null;
 
     for (const key of chartKeys) {
       const chart = charts[key];
       chart.data.labels = times;
-      chart.data.datasets[0].data = data.rows.map(row => row[key]);
+      chart.data.datasets[0].data = plotRows.map(row => row[key] ?? null);
       chart.update("none");
 
       document.getElementById("title-" + key).textContent =
