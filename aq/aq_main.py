@@ -1,39 +1,68 @@
+"""Entry point for the AQ subsystem."""
 import fcntl
-import math
-import os
 from pathlib import Path
 import sys
-import time
-import requests
-import AQFunctions
-
+import AQFunctions      #import functions from AQFunctions.py file
+import argparse         #import argparse which allows me to easily run tests by passing an argument into the terminal
 from post_air import send_to_wvi
+import requests
+import time
+import os
+import math
 
+sensor_readings = AQFunctions.readings()    #Initialise "readings" class
 
-def collect_and_publish(sensor_readings, warmup_seconds):
+#SEND2SERVER = 0     # Variable in place of WVI function - code is a proxy
+
+# agruments setup
+parser = argparse.ArgumentParser()
+parser.add_argument("-t","--Test", help="Runs REQ-F-03 testing conditions, enables terminal printing.")
+parser.add_argument("-H","--HistTest", help="Runs REQ-F-06 testing conditions, checks historical data can be retrieved. (Enables terminal printing)")
+parser.add_argument("-n","--NoWVI", help="Runs program without involving the WVI subsystem")
+parser.add_argument("-w","--Once", help="Runs program once, single loop, no repeating.")
+parser.add_argument("-s","--simulate", help="Simulates Enviro+ Readings due to broken I2C connections")
+args = parser.parse_args()
+
+RECALL_AFTER = 10 #For historical test, program will attempt to recall the first reading after RECALL_AFTER runs.
+
+def collect_and_publish(sensor_readings, warmup_seconds, args, SIMULATE, ready_at):
     # Start timing after the first successful read: the gas driver enables its
     # heater lazily, so sleeping before reading does not warm the sensor up.
-    ready_at = None
     print(f"AQ settling for {warmup_seconds:g}s before publishing", flush=True)
-    while True:
-        started = time.monotonic()
-        try:
-            sensor_readings.record_data()
-            if ready_at is None:
-                ready_at = time.monotonic() + warmup_seconds
-            elif time.monotonic() >= ready_at:
-                send_to_wvi(sensor_readings)
-        except requests.RequestException as error:
-            print(f"WVI POST failed: {error}", flush=True)
-        except OSError as error:
-            print(f"Sensor reading failed: {error}", flush=True)
+    try:
+        sensor_readings.record_data(SIMULATE)    #Only Simulates if argument says to
+        if args.Test or args.HistTest:
+            sensor_readings.print_data()    #For Testing, prints to terminal
+        if args.HistTest and len(sensor_readings.timestamp)==RECALL_AFTER:
+            print(f'''__Historical Test - First Reading Recollection__        
+            TIME:        {sensor_readings.timestamp[0]}\n
+            Temperature: {sensor_readings.env_temps_record[0]} {sensor_readings.temp_unit}\n
+            Pressure:    {sensor_readings.pressure[0]} {sensor_readings.pressure_unit}\n
+            Humidity:    {sensor_readings.humidity[0]} {sensor_readings.humidity_unit}\n
+            Light:       {sensor_readings.light[0]} {sensor_readings.light_unit}\n
+            Oxidised:    {sensor_readings.gases.oxidising[0]} {sensor_readings.gas_unit}\n
+            Reduced:     {sensor_readings.gases.reducing[0]} {sensor_readings.gas_unit}\n
+            nh3:         {sensor_readings.gases.nh3[0]} {sensor_readings.gas_unit}\n
+            __READING RETRIEVAL SUCCESS__\n''')
+        if not args.NoWVI:
+            try:
+                if ready_at is None:
+                    ready_at = time.monotonic() + warmup_seconds
+                elif time.monotonic() >= ready_at:
+                    send_to_wvi(sensor_readings)
+            except requests.RequestException as e:
+                print(f"WVI API POST FAILURE: {e}")
+    except Exception as e:
+        print(f"AQ READING FAILURE: {e}")
+    return ready_at
 
-        time.sleep(max(0, 1 - (time.monotonic() - started)))
 
 def main():
+    """Run the AQ subsystem."""
     warmup_seconds = float(os.environ.get("AQ_WARMUP_SECONDS", "30"))
     if not math.isfinite(warmup_seconds) or warmup_seconds < 0:
         raise ValueError("AQ_WARMUP_SECONDS must be finite and non-negative")
+    # Method to check that another aq main is not running
     lock_path = Path.home() / ".cache" / "uav" / "aq.lock"
     lock_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -43,9 +72,52 @@ def main():
         except BlockingIOError:
             print("AQ is already running. Stop aq.service first.")
             return 1
-        sensor_readings = AQFunctions.readings()
+        # Should be running continuously to save data, or use lightweight method
+        PRINT2TERMINAL = False
+        if args.Test:
+            print("Running REQ-F-03 Test as described in doc. P-AQ12-TR_26v1, section 5\n")
+            PRINT2TERMINAL = True
+        elif args.HistTest:
+            print("Running REQ-F-06 Test as described in doc. P-AQ12-TR_26v1, section 5\n")
+            PRINT2TERMINAL = True
+        if args.NoWVI:
+            print("Disabling Web Server functionality...\n")
+        if args.simulate:
+            SIMULATE = True
+            print("Environment Readings now switching to simulated alternative...\n")
+        else:
+            SIMULATE = False
+        
+        ready_at = None
+        print("set as none")
+        if args.Once:
+            print("Running aq_main.py once...\n")
+            REPEAT = False
+            ready_at = collect_and_publish(sensor_readings, warmup_seconds, args, SIMULATE, ready_at)
+        else:
+            REPEAT = True
+        
+        while REPEAT:
+            timestamp = time.monotonic()
+            ready_at = collect_and_publish(sensor_readings, warmup_seconds, args, SIMULATE, ready_at)
+            time.sleep(max(0,1-(time.monotonic()-timestamp)))
+        
+        
+    '''
+    sensor_readings.record_data()
+    
+    sensor_readings.print_data()    # For Testing, prints to terminal
 
-        collect_and_publish(sensor_readings, warmup_seconds)
+    # Lightweight way to get information for sending to server
+    cpu_temp, env_temp, oxidising, reducing, nh3, light, humidity, pressure, timestamp = sensor_readings.recent_readings()
+    SEND2SERVER = [cpu_temp, env_temp, oxidising, reducing, nh3, light, humidity, pressure, timestamp] # Sends just recent sensor reading
+    # Simpler way to write the lightweight method.
+    SEND2SERVER = list(sensor_readings.recent_readings())
+
+    # Sends entire sensor readings class
+    SEND2SERVER = sensor_readings  
+
+    print("AQ subsystem main is not fully tested yet.")'''
 
 
 if __name__ == "__main__":
