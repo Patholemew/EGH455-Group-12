@@ -1,14 +1,21 @@
-%YAML:1.0
+%YAML 1.2
 ---
 camera_socket: CAM_A
-image_width: 1280
-image_height: 720
+image_width: 512
+image_height: 512
+source_image_width: 4000
+source_image_height: 3000
+crop_x: 1320
+crop_y: 820
+crop_width: 1360
+crop_height: 1360
+crop_zoom: 2.2000000000000002
 camera_matrix: !!opencv-matrix
    rows: 3
    cols: 3
    dt: d
-   data: [ 987.43994140625, 0., 664.17987060546875, 0., 987.43994140625,
-       358.23248291015625, 0., 0., 1. ]
+   data: [ 1161.6940257352942, 0., 284.44687499999998, 0.,
+       1161.6940257352942, 253.92054227941176, 0., 0., 1. ]
 distortion_coefficients: !!opencv-matrix
    rows: 14
    cols: 1
