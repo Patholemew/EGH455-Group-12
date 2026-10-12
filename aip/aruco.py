@@ -4,7 +4,7 @@ import cv2
 
 
 # Must match the dictionary used to generate the physical markers.
-ARUCO_DICTIONARY = cv2.aruco.DICT_5X5_50 # 5x5 grid
+ARUCO_DICTIONARY = cv2.aruco.DICT_5X5_100  # 5x5 grid, 100 markers
 _detector = cv2.aruco.ArucoDetector(
     cv2.aruco.getPredefinedDictionary(ARUCO_DICTIONARY),
     cv2.aruco.DetectorParameters(),
