@@ -105,6 +105,4 @@ class PoseEstimator:
             origin = (10, 30 + row * 30)
             cv2.putText(annotated, label, origin, cv2.FONT_HERSHEY_SIMPLEX,
                         0.6, (0, 0, 0), 4, cv2.LINE_AA)
-            cv2.putText(annotated, label, origin, cv2.FONT_HERSHEY_SIMPLEX,
-                        0.6, (255, 255, 255), 1, cv2.LINE_AA)
         return annotated
