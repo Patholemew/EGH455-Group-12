@@ -16,13 +16,26 @@ FALLBACK_LABELS = [
 CLASS_CONFIDENCE = {
     "Blue Gauge": 0.50,
     "Plain Gauge": 0.50,
-    "Gauge Centre": 0.20,
+    "Gauge Centre": 0.10,
     "Needle": 0.15,
     "Open Valve": 0.30,
     "Closed Valve": 0.30,
 }
 
 DEFAULT_CONFIDENCE = 0.25
+
+# -------------------------------------------------------------
+# Camera crop settings
+# -------------------------------------------------------------
+
+# 1.0 = largest centred square
+# 2.0 = 2x zoom
+# 3.0 = 3x zoom
+CROP_ZOOM = 2.2
+
+# OAK-D Lite RGB full resolution.
+CAMERA_WIDTH = 4000
+CAMERA_HEIGHT = 3000
 
 
 def bbox_centre(bbox):
@@ -71,8 +84,8 @@ class OakDetector:
     def __init__(
         self,
         model_path,
-        confidence=0.40,
-        camera_fps=30.0,
+        confidence=0.30,
+        camera_fps=15.0,
     ):
 
         model_path = Path(model_path).resolve()
@@ -107,25 +120,88 @@ class OakDetector:
             .build(dai.CameraBoardSocket.CAM_A)
         )
 
-        camera_output = camera.requestOutput(
-            size=self.input_size,
+        if CROP_ZOOM < 1.0:
+            raise ValueError("CROP_ZOOM must be >= 1.0")
+
+        # Full-resolution camera output.
+        # High-resolution camera output.
+        full_res_output = camera.requestFullResolutionOutput(
             type=dai.ImgFrame.Type.BGR888p,
-            resizeMode=dai.ImgResizeMode.LETTERBOX,
             fps=camera_fps,
         )
+
+        # -------------------------------------------------------------
+        # Centre crop
+        # -------------------------------------------------------------
+
+        # Largest possible square from the full camera frame.
+        base_crop_size = min(CAMERA_WIDTH, CAMERA_HEIGHT)
+
+        # Make the square smaller as zoom increases.
+        crop_size = int(base_crop_size / CROP_ZOOM)
+
+        # RVC2 ImageManip works best with widths aligned to 16 pixels.
+        crop_size = (crop_size // 16) * 16
+
+        # Keep crop centred in the original image.
+        crop_x = (CAMERA_WIDTH - crop_size) // 2
+        crop_y = (CAMERA_HEIGHT - crop_size) // 2
+
+        print(
+            f"Camera crop: {CROP_ZOOM:.1f}x | "
+            f"{crop_size}x{crop_size} px | "
+            f"top-left=({crop_x}, {crop_y})"
+        )
+
+        # -------------------------------------------------------------
+        # Crop high-resolution image, THEN resize to NN input
+        # -------------------------------------------------------------
+
+        manip = self.pipeline.create(dai.node.ImageManip)
+
+        manip.setBackend(
+            dai.node.ImageManip.Backend.CPU
+        )
+
+        # Crop is performed first, while we still have the high-res image.
+        manip.initialConfig.addCrop(
+            crop_x,
+            crop_y,
+            crop_size,
+            crop_size,
+        )
+
+        # Then resize the cropped square to the model input size.
+        manip.initialConfig.setOutputSize(
+            self.width,
+            self.height,
+            dai.ImageManipConfig.ResizeMode.STRETCH,
+        )
+
+        # Model expects planar BGR.
+        manip.initialConfig.setFrameType(
+            dai.ImgFrame.Type.BGR888p
+        )
+
+        full_res_output.link(manip.inputImage)
+
+        camera_output = manip.out
 
         # -------------------------------------------------------------
         # Neural network
         # -------------------------------------------------------------
 
-        self.network = (
-            self.pipeline
-            .create(dai.node.DetectionNetwork)
-            .build(
-                camera_output,
-                archive,
-            )
+        print("Creating network...")
+
+        self.network = self.pipeline.create(
+            dai.node.DetectionNetwork
         )
+
+        self.network.setNNArchive(archive)
+
+        camera_output.link(self.network.input)
+
+        print("Network created")
 
         self.network.setConfidenceThreshold(
             confidence
@@ -165,7 +241,11 @@ class OakDetector:
             .createOutputQueue()
         )
 
+        print("Starting pipeline...")
+
         self.pipeline.start()
+
+        print("Pipeline started")
 
     # =================================================================
     # Detection conversion
@@ -398,14 +478,14 @@ class OakDetector:
         """
         Wait for next YOLO inference and return processed result.
         """
-
+        
         frame_message = self.frame_queue.get()
 
         detection_message = (
             self.detection_queue.get()
         )
 
-        # This stays completely untouched.
+        # Exact image used for YOLO.
         frame = frame_message.getCvFrame()
 
         # All annotations go onto a copy.
