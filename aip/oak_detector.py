@@ -1,8 +1,14 @@
 from pathlib import Path
+import time
 
 import cv2
 import depthai as dai
 
+# Use to enable or disable FPS display on annotated frames
+SHOW_FPS = True
+
+# Used to config model - original was 8, trial 5
+NUM_SHAVES = 5
 
 FALLBACK_LABELS = [
     "Blue Gauge",
@@ -197,7 +203,7 @@ class OakDetector:
             dai.node.DetectionNetwork
         )
 
-        self.network.setNNArchive(archive)
+        self.network.setNNArchive(archive, numShaves=NUM_SHAVES)
 
         camera_output.link(self.network.input)
 
@@ -240,6 +246,9 @@ class OakDetector:
             .out
             .createOutputQueue()
         )
+
+        self._fps_last_time = None
+        self._fps = 0.0
 
         print("Starting pipeline...")
 
@@ -491,6 +500,18 @@ class OakDetector:
         # All annotations go onto a copy.
         annotated_frame = frame.copy()
 
+        # Shows the FPS on the annotated frame if SHOW_FPS is True.
+        if SHOW_FPS:
+            now = time.time()
+
+            if self._fps_last_time is not None:
+                dt = now - self._fps_last_time
+
+                if dt > 0:
+                    self._fps = 1.0 / dt
+
+            self._fps_last_time = now
+
         detections = [
             self._convert_detection(d)
             for d in detection_message.detections
@@ -605,6 +626,18 @@ class OakDetector:
             self._draw_detection(
                 annotated_frame,
                 detection,
+            )
+
+        if SHOW_FPS:
+            cv2.putText(
+                annotated_frame,
+                f"FPS: {self._fps:.1f}",
+                (10, 30),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.8,
+                (0, 255, 255),
+                2,
+                cv2.LINE_AA,
             )
 
         # -------------------------------------------------------------
