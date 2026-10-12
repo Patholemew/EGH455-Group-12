@@ -4,7 +4,7 @@ from time import sleep
 
 from gpiozero import Servo
 
-GPIO_PIN = 12
+GPIO_PIN = 13
 
 DRILL_SPEED = 1
 RETURN_SPEED = -1
