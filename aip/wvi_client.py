@@ -76,7 +76,7 @@ def send_aip_output(aip_data, aip_image):
             "event_id": "gauge-1",
             "type": "gauge",
             "reading": float(gauge["measurement"]),
-            "unit": "UNIT"
+            "unit": "BAR"
         })
 
     for marker in aip_data["aruco"]:

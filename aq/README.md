@@ -6,7 +6,27 @@ Run the subsystem entry point from the repository root:
 python3 aq/aq_main.py
 ```
 
-`aq_main.py` is a scaffold for subsystem startup and coordination. It currently prints the most recent sensor data when run and shows methods on how to upload information to the server. The server function has not been implemented and a proxy is put in place.prints the most recent sensor data when run and shows methods on how to upload information to the server. The server function has not been implemented and a proxy is put in place.
+`aq_main.py` samples once per second and posts readings to WVI. It samples for
+30 seconds after the first successful read before publishing, so startup
+artifacts are not stored. The gas heater starts on the first read. Configure
+the settling time with `AQ_WARMUP_SECONDS` (seconds, default `30`); even `0`
+discards the first sample. This is a startup artifact guard, not a guarantee
+that gas readings have fully stabilised after a cold boot. Increase the period
+if measurements show a longer settling time. The dashboard shows Waiting or
+Stale during this period. CPU temperature compensation uses five recent samples.
+
+Charts leave a break when samples are more than five seconds apart. Existing
+bad readings remain stored until explicitly cleaned. Preview specific IDs:
+
+```bash
+python3 scripts/clean_air_readings.py --database /var/lib/uav-wvi/wvi.sqlite3 --ids 123 456
+```
+
+Use actual IDs verified against restart times and neighbouring readings. Add
+`--apply --backup /path/to/new-backup.sqlite3` to remove those rows after making
+a full SQLite backup, including committed WAL data. Do not remove readings
+solely because they are unusually high or low; actual environmental changes
+can produce spikes too. Other database tables are left intact.
 
 ## Existing Scripts
 
@@ -30,5 +50,3 @@ repository root (the hardware drivers must also be installed):
 ```
 
 Pillow provides the `PIL` import; it is a runtime dependency of the LCD scripts.
-
-Add subsystem startup logic to `main()` in `aq_main.py` as it is developed.
