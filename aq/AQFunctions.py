@@ -1,6 +1,6 @@
 import time
 from bme280 import BME280
-
+import numpy as np
 # Weather and Light
 try:
     # Transitional fix for breaking change in LTR559
@@ -62,7 +62,13 @@ class gases:
         self.oxidising = []
         self.reducing = []
         self.nh3 = []
-
+        
+class GasBaseline:
+    def __init__(self):
+        self.oxidising = 48.23
+        self.reducing = 300.27
+        self.nh3 = 329.0
+        
 # Class to run all sensor data immediately
 class readings:
     """Keeps Record of All Sensor Readings"""
@@ -125,6 +131,7 @@ class readings:
         self.humidity.append(humidity)
         self.pressure.append(pressure)
         self.timestamp.append(timestamp)
+        convert2ppm(self) #checks if calibrated and if so applies conversion to ppm.
 
     def print_data(self):
         """Prints most recent data to the Terminal"""
@@ -137,6 +144,24 @@ class readings:
         Oxidised:    {oxidising} {self.gas_unit}\n
         Reduced:     {reducing} {self.gas_unit}\n
         nh3:         {nh3} {self.gas_unit}\n''')
+    def convert2ppm(self):
+            #Oxidation
+            oxy_ratio = abs(self.gases.oxidising[-1] / self.gas_baseline.oxidising) #Rs/R0 - abs() to ensure log doesn't fail
+            oxy_const = 1/0.9804
+            oxy_ppm = 10**(oxy_const*(np.log10(oxy_ratio) - 0.7813))
+            #Reduction
+            red_ratio = abs(self.gases.reducing[-1] / self.gas_baseline.reducing) #Rs/R0
+            red_const = -1/0.8526
+            red_ppm = 10**(red_const*(np.log10(red_ratio) - 0.5587))
+            #Reduction
+            nh3_ratio = abs(self.gases.nh3[-1] / self.gas_baseline.nh3) #Rs/R0
+            nh3_const = -1/1.9641
+            nh3_ppm = 10**(nh3_const*(np.log10(nh3_ratio) + 0.3347))
+            # Replace resistance value with recalibrated values
+            self.gases.oxidising[-1] = oxy_ppm
+            self.gases.reducing[-1] = red_ppm
+            self.gases.nh3[-1] = nh3_ppm
+        # else keep uncalibrated values until chosen R0 value and run automatic historical calibration
         
 
 
