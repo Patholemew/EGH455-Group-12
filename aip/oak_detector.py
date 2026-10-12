@@ -39,8 +39,8 @@ CLASS_CONFIDENCE = {
     "Plain Gauge": 0.50,
     "Gauge Centre": 0.10,
     "Needle": 0.15,
-    "Open Valve": 0.60,
-    "Closed Valve": 0.60,
+    "Open Valve": 0.70,
+    "Closed Valve": 0.70,
 }
 
 DEFAULT_CONFIDENCE = 0.25
