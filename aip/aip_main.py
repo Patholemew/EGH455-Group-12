@@ -33,6 +33,7 @@ MODEL = (
 
 CONFIDENCE = 0.10 # Minimum confidence for object detection
 DRILL_THRESHOLD = 2.0 # Gauge measurement below which drilling starts
+CAMERA_FPS = 30.0 # Camera frames per second. The OAK-D camera will be set to this FPS, and the AIP will process frames at this rate.
 # The systemd service has no X display; opening an OpenCV window there aborts
 # the process after its first frame. Keep the preview for desktop sessions.
 SHOW_DISPLAY = bool(os.environ.get("DISPLAY"))
@@ -57,6 +58,7 @@ def main(argv=None):
     with OakDetector(
         MODEL,
         confidence=CONFIDENCE,
+        fps=CAMERA_FPS,
     ) as detector:
 
         frame_count = 0
@@ -71,7 +73,8 @@ def main(argv=None):
                 # Run object detection
                 # ---------------------------------------------------------
                 
-                # Capture a frame from the OAK-D and run object detection. The result is a dictionary containing the raw frame, annotated frame, and detected gauges.
+                # Get the next completed object-detection result from the continuously running OAK-D pipeline.
+                #  The result is a dictionary containing the raw frame, annotated frame, and detected gauges.
                 result = detector.read()
 
                 # Capture the current timestamp in ISO 8601 format with UTC timezone. This timestamp is used for WVI output.
