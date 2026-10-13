@@ -8,7 +8,7 @@ import depthai as dai
 SHOW_FPS = True
 
 # Used to config model - original was 8, trial 5
-NUM_SHAVES = 5
+NUM_SHAVES = 8
 
 FALLBACK_LABELS = [
     "Blue Gauge",
@@ -131,6 +131,7 @@ class OakDetector:
 
         # Full-resolution camera output.
         # High-resolution camera output.
+        # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! come here to change cam resolution
         full_res_output = camera.requestFullResolutionOutput(
             type=dai.ImgFrame.Type.BGR888p,
             fps=camera_fps,
