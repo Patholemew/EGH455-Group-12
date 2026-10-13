@@ -37,11 +37,11 @@ DEFAULT_CONFIDENCE = 0.25
 # 1.0 = largest centred square
 # 2.0 = 2x zoom
 # 3.0 = 3x zoom
-CROP_ZOOM = 2.2
+CROP_ZOOM = 1.0
 
 # OAK-D Lite RGB full resolution.
-CAMERA_WIDTH = 4000
-CAMERA_HEIGHT = 3000
+CAMERA_WIDTH = 640
+CAMERA_HEIGHT = 640
 
 
 def bbox_centre(bbox):
@@ -132,67 +132,71 @@ class OakDetector:
         # Full-resolution camera output.
         # High-resolution camera output.
         # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! come here to change cam resolution
-        full_res_output = camera.requestFullResolutionOutput(
+        camera_output = camera.requestOutput(
+            size=(CAMERA_WIDTH, CAMERA_HEIGHT),
             type=dai.ImgFrame.Type.BGR888p,
+            res=dai.ColorCameraProperties.SensorResolution.THE_1080_P,
+            resizeMode=dai.ImgResizeMode.CROP,
             fps=camera_fps,
         )
 
-        # -------------------------------------------------------------
-        # Centre crop
-        # -------------------------------------------------------------
+        # # -------------------------------------------------------------
+        # # Centre crop
+        # # -------------------------------------------------------------
 
-        # Largest possible square from the full camera frame.
-        base_crop_size = min(CAMERA_WIDTH, CAMERA_HEIGHT)
+        # # Largest possible square from the full camera frame.
+        # base_crop_size = min(CAMERA_WIDTH, CAMERA_HEIGHT)
 
-        # Make the square smaller as zoom increases.
-        crop_size = int(base_crop_size / CROP_ZOOM)
+        # # Make the square smaller as zoom increases.
+        # crop_size = int(base_crop_size / CROP_ZOOM)
 
-        # RVC2 ImageManip works best with widths aligned to 16 pixels.
-        crop_size = (crop_size // 16) * 16
+        # # RVC2 ImageManip works best with widths aligned to 16 pixels.
+        # crop_size = (crop_size // 16) * 16
 
-        # Keep crop centred in the original image.
-        crop_x = (CAMERA_WIDTH - crop_size) // 2
-        crop_y = (CAMERA_HEIGHT - crop_size) // 2
+        # # Keep crop centred in the original image.
+        # crop_x = (CAMERA_WIDTH - crop_size) // 2
+        # crop_y = (CAMERA_HEIGHT - crop_size) // 2
 
-        print(
-            f"Camera crop: {CROP_ZOOM:.1f}x | "
-            f"{crop_size}x{crop_size} px | "
-            f"top-left=({crop_x}, {crop_y})"
-        )
+        # print(
+        #     f"Camera crop: {CROP_ZOOM:.1f}x | "
+        #     f"{crop_size}x{crop_size} px | "
+        #     f"top-left=({crop_x}, {crop_y})"
+        # )
 
-        # -------------------------------------------------------------
-        # Crop high-resolution image, THEN resize to NN input
-        # -------------------------------------------------------------
+        # # -------------------------------------------------------------
+        # # Crop high-resolution image, THEN resize to NN input
+        # # -------------------------------------------------------------
 
-        manip = self.pipeline.create(dai.node.ImageManip)
+        # manip = self.pipeline.create(dai.node.ImageManip)
 
-        manip.setBackend(
-            dai.node.ImageManip.Backend.CPU
-        )
+        # manip.setBackend(
+        #     dai.node.ImageManip.Backend.CPU
+        # )
 
-        # Crop is performed first, while we still have the high-res image.
-        manip.initialConfig.addCrop(
-            crop_x,
-            crop_y,
-            crop_size,
-            crop_size,
-        )
+        # # Crop is performed first, while we still have the high-res image.
+        # manip.initialConfig.addCrop(
+        #     crop_x,
+        #     crop_y,
+        #     crop_size,
+        #     crop_size,
+        # )
 
-        # Then resize the cropped square to the model input size.
-        manip.initialConfig.setOutputSize(
-            self.width,
-            self.height,
-            dai.ImageManipConfig.ResizeMode.STRETCH,
-        )
+        # # Then resize the cropped square to the model input size.
+        # manip.initialConfig.setOutputSize(
+        #     self.width,
+        #     self.height,
+        #     dai.ImageManipConfig.ResizeMode.STRETCH,
+        # )
 
-        # Model expects planar BGR.
-        manip.initialConfig.setFrameType(
-            dai.ImgFrame.Type.BGR888p
-        )
+        # # Model expects planar BGR.
+        # manip.initialConfig.setFrameType(
+        #     dai.ImgFrame.Type.BGR888p
+        # )
 
-        full_res_output.link(manip.inputImage)
+        # camera_output.link(manip.inputImage)
 
-        camera_output = manip.out
+        # nn_input = manip.out
+        nn_input = camera_output
 
         # -------------------------------------------------------------
         # Neural network
@@ -206,7 +210,7 @@ class OakDetector:
 
         self.network.setNNArchive(archive, numShaves=NUM_SHAVES)
 
-        camera_output.link(self.network.input)
+        nn_input.link(self.network.input)
 
         print("Network created")
 
@@ -632,7 +636,7 @@ class OakDetector:
         if SHOW_FPS:
             cv2.putText(
                 annotated_frame,
-                f"FPS: {self._fps:.1f}",
+                f"FPS_S8: {self._fps:.1f}",
                 (10, 30),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 0.8,
