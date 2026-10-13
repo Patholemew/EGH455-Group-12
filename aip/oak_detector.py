@@ -30,19 +30,6 @@ CLASS_CONFIDENCE = {
 
 DEFAULT_CONFIDENCE = 0.25
 
-# -------------------------------------------------------------
-# Camera crop settings
-# -------------------------------------------------------------
-
-# 1.0 = largest centred square
-# 2.0 = 2x zoom
-# 3.0 = 3x zoom
-CROP_ZOOM = 1.0
-
-# OAK-D Lite RGB full resolution.
-CAMERA_WIDTH = 640
-CAMERA_HEIGHT = 640
-
 
 def bbox_centre(bbox):
     """Return centre point (x, y) of a bounding box."""
@@ -116,86 +103,38 @@ class OakDetector:
         self.width = self.input_size[0]
         self.height = self.input_size[1]
 
+        print(
+            f"Model/camera frame size: "
+            f"{self.width}x{self.height}"
+        )
+
         # -------------------------------------------------------------
         # Camera
         # -------------------------------------------------------------
 
+        # Run the RGB camera continuously.
+        # Sensor FPS is configured here rather than requesting a
+        # high-resolution sensor stream.
         camera = (
             self.pipeline
             .create(dai.node.Camera)
-            .build(dai.CameraBoardSocket.CAM_A)
+            .build(
+                dai.CameraBoardSocket.CAM_A,
+                sensorFps=camera_fps,
+            )
         )
 
-        if CROP_ZOOM < 1.0:
-            raise ValueError("CROP_ZOOM must be >= 1.0")
-
-        # Full-resolution camera output.
-        # High-resolution camera output.
-        # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! come here to change cam resolution
+        # Request exactly the image size required by the model.
+        #
+        # CROP keeps the image undistorted in aspect ratio and removes
+        # only the excess sides to produce a centred square image.
         camera_output = camera.requestOutput(
-            size=(CAMERA_WIDTH, CAMERA_HEIGHT),
+            size=(self.width, self.height),
             type=dai.ImgFrame.Type.BGR888p,
-            res=dai.ColorCameraProperties.SensorResolution.THE_1080_P,
             resizeMode=dai.ImgResizeMode.CROP,
-            fps=camera_fps,
         )
 
-        # # -------------------------------------------------------------
-        # # Centre crop
-        # # -------------------------------------------------------------
-
-        # # Largest possible square from the full camera frame.
-        # base_crop_size = min(CAMERA_WIDTH, CAMERA_HEIGHT)
-
-        # # Make the square smaller as zoom increases.
-        # crop_size = int(base_crop_size / CROP_ZOOM)
-
-        # # RVC2 ImageManip works best with widths aligned to 16 pixels.
-        # crop_size = (crop_size // 16) * 16
-
-        # # Keep crop centred in the original image.
-        # crop_x = (CAMERA_WIDTH - crop_size) // 2
-        # crop_y = (CAMERA_HEIGHT - crop_size) // 2
-
-        # print(
-        #     f"Camera crop: {CROP_ZOOM:.1f}x | "
-        #     f"{crop_size}x{crop_size} px | "
-        #     f"top-left=({crop_x}, {crop_y})"
-        # )
-
-        # # -------------------------------------------------------------
-        # # Crop high-resolution image, THEN resize to NN input
-        # # -------------------------------------------------------------
-
-        # manip = self.pipeline.create(dai.node.ImageManip)
-
-        # manip.setBackend(
-        #     dai.node.ImageManip.Backend.CPU
-        # )
-
-        # # Crop is performed first, while we still have the high-res image.
-        # manip.initialConfig.addCrop(
-        #     crop_x,
-        #     crop_y,
-        #     crop_size,
-        #     crop_size,
-        # )
-
-        # # Then resize the cropped square to the model input size.
-        # manip.initialConfig.setOutputSize(
-        #     self.width,
-        #     self.height,
-        #     dai.ImageManipConfig.ResizeMode.STRETCH,
-        # )
-
-        # # Model expects planar BGR.
-        # manip.initialConfig.setFrameType(
-        #     dai.ImgFrame.Type.BGR888p
-        # )
-
-        # camera_output.link(manip.inputImage)
-
-        # nn_input = manip.out
+        # Feed the square camera stream directly into YOLO.
         nn_input = camera_output
 
         # -------------------------------------------------------------
@@ -636,7 +575,7 @@ class OakDetector:
         if SHOW_FPS:
             cv2.putText(
                 annotated_frame,
-                f"FPS_S8: {self._fps:.1f}",
+                f"FPS: {self._fps:.1f}",
                 (10, 30),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 0.8,
