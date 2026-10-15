@@ -120,7 +120,6 @@ class OakDetector:
             .create(dai.node.Camera)
             .build(
                 dai.CameraBoardSocket.CAM_A,
-                sensorResolution=(1920, 1080),
                 sensorFps=camera_fps,
             )
         )

@@ -58,7 +58,7 @@ def main(argv=None):
     with OakDetector(
         MODEL,
         confidence=CONFIDENCE,
-        fps=CAMERA_FPS,
+        camera_fps=CAMERA_FPS,
     ) as detector:
 
         frame_count = 0
