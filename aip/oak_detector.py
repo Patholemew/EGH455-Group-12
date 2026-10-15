@@ -10,6 +10,21 @@ SHOW_FPS = True
 # Used to config model - original was 8, trial 5
 NUM_SHAVES = 6
 
+# -------------------------------------------------------------
+# Camera crop / digital zoom
+# -------------------------------------------------------------
+
+CROP_ZOOM = 1.3
+
+# Options:
+#   "center" = crop is centred vertically and horizontally
+#   "bottom" = crop is centred left/right and aligned to bottom
+CROP_POSITION = "center"
+
+# OAK-D Lite RGB sensor is 4000 x 3000.
+# We first use the central 3000 x 3000 square.
+CROP_BASE_SIZE = 1024
+
 FALLBACK_LABELS = [
     "Blue Gauge",
     "Closed Valve",
@@ -124,18 +139,98 @@ class OakDetector:
             )
         )
 
-        # Request exactly the image size required by the model.
+        # -------------------------------------------------------------
+        # Camera crop / digital zoom
+        # -------------------------------------------------------------
+
+        # First request the central 3000 x 3000 region of the
+        # 4000 x 3000 RGB sensor.
         #
-        # CROP keeps the image undistorted in aspect ratio and removes
-        # only the excess sides to produce a centred square image.
+        # At 1.0x zoom this gives the same square FOV as before,
+        # but at high resolution so we can apply our own crop.
         camera_output = camera.requestOutput(
-            size=(self.width, self.height),
+            size=(CROP_BASE_SIZE, CROP_BASE_SIZE),
             type=dai.ImgFrame.Type.BGR888p,
             resizeMode=dai.ImgResizeMode.CROP,
         )
 
-        # Feed the square camera stream directly into YOLO.
-        nn_input = camera_output
+
+        # Calculate size of zoomed square crop.
+        crop_size = int(CROP_BASE_SIZE / CROP_ZOOM)
+
+        # Keep crop width aligned to 16 pixels for the OAK hardware.
+        crop_size = (crop_size // 16) * 16
+
+
+        # Always centre crop horizontally.
+        crop_x = (CROP_BASE_SIZE - crop_size) // 2
+
+
+        # Choose vertical position.
+        if CROP_POSITION == "center":
+
+            crop_y = (CROP_BASE_SIZE - crop_size) // 2
+
+        elif CROP_POSITION == "bottom":
+
+            crop_y = CROP_BASE_SIZE - crop_size
+
+        else:
+            raise ValueError(
+                f"Invalid CROP_POSITION: {CROP_POSITION}. "
+                f'Use "center" or "bottom".'
+            )
+
+
+        print(
+            f"Camera crop: {CROP_ZOOM:.2f}x "
+            f"({CROP_POSITION}), "
+            f"{crop_size}x{crop_size} "
+            f"at ({crop_x}, {crop_y})"
+        )
+
+
+        # -------------------------------------------------------------
+        # Crop and resize to neural-network input size
+        # -------------------------------------------------------------
+
+        manip = self.pipeline.create(
+            dai.node.ImageManip
+        )
+
+        manip.setMaxOutputFrameSize(
+            self.width * self.height * 3
+        )
+
+        # Crop first.
+        manip.initialConfig.addCrop(
+            x=crop_x,
+            y=crop_y,
+            w=crop_size,
+            h=crop_size,
+        )
+
+        # Then resize the square crop to the NN input resolution.
+        #
+        # Because both input crop and output are square, STRETCH does
+        # not distort the image.
+        manip.initialConfig.setOutputSize(
+            self.width,
+            self.height,
+            dai.ImageManipConfig.ResizeMode.STRETCH,
+        )
+
+        manip.initialConfig.setFrameType(
+            dai.ImgFrame.Type.BGR888p
+        )
+
+
+        # Camera -> crop/resize -> YOLO
+        camera_output.link(
+            manip.inputImage
+        )
+
+        nn_input = manip.out
 
         # -------------------------------------------------------------
         # Neural network
