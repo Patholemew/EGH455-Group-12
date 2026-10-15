@@ -8,7 +8,7 @@ import depthai as dai
 SHOW_FPS = True
 
 # Used to config model - original was 8, trial 5
-NUM_SHAVES = 8
+NUM_SHAVES = 6
 
 FALLBACK_LABELS = [
     "Blue Gauge",
@@ -191,7 +191,8 @@ class OakDetector:
             .createOutputQueue()
         )
 
-        self._fps_last_time = None
+        self._fps_start_time = time.monotonic()
+        self._fps_frame_count = 0
         self._fps = 0.0
 
         print("Starting pipeline...")
@@ -446,15 +447,15 @@ class OakDetector:
 
         # Shows the FPS on the annotated frame if SHOW_FPS is True.
         if SHOW_FPS:
-            now = time.time()
+            self._fps_frame_count += 1
 
-            if self._fps_last_time is not None:
-                dt = now - self._fps_last_time
+            elapsed = time.monotonic() - self._fps_start_time
 
-                if dt > 0:
-                    self._fps = 1.0 / dt
+            if elapsed >= 1.0:
+                self._fps = self._fps_frame_count / elapsed
 
-            self._fps_last_time = now
+                self._fps_frame_count = 0
+                self._fps_start_time = time.monotonic()
 
         detections = [
             self._convert_detection(d)
@@ -575,7 +576,7 @@ class OakDetector:
         if SHOW_FPS:
             cv2.putText(
                 annotated_frame,
-                f"FPS: {self._fps:.1f}",
+                f"FPS_S{NUM_SHAVES}: {self._fps:.1f}",
                 (10, 30),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 0.8,

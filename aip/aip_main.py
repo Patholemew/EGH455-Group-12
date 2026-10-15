@@ -33,11 +33,12 @@ MODEL = (
 
 CONFIDENCE = 0.10 # Minimum confidence for object detection
 DRILL_THRESHOLD = 2.0 # Gauge measurement below which drilling starts
-CAMERA_FPS = 30.0 # Camera frames per second. The OAK-D camera will be set to this FPS, and the AIP will process frames at this rate.
+CAMERA_FPS = 15.0 # Camera frames per second. The OAK-D camera will be set to this FPS, and the AIP will process frames at this rate.
 # The systemd service has no X display; opening an OpenCV window there aborts
 # the process after its first frame. Keep the preview for desktop sessions.
 SHOW_DISPLAY = bool(os.environ.get("DISPLAY"))
-PRINT_RESULTS = True # Whether to print detection results to the console. Set to False for headless operation.
+PRINT_RESULTS = False # Whether to print detection results to the console. Set to False for headless operation.
+SHOW_TIMINGS = False
 #---------------------------------------------------------
 
 def main(argv=None):
@@ -65,9 +66,11 @@ def main(argv=None):
         fps_start = time.monotonic()
         drill_thread = None
         drill_trigger_armed = True
+        timings_prev = {}
 
         try:
             while True:
+                loop_start = time.perf_counter()
 
                 # ---------------------------------------------------------
                 # Run object detection
@@ -75,7 +78,10 @@ def main(argv=None):
                 
                 # Get the next completed object-detection result from the continuously running OAK-D pipeline.
                 #  The result is a dictionary containing the raw frame, annotated frame, and detected gauges.
+                t0 = time.perf_counter()
                 result = detector.read()
+                t1 = time.perf_counter()
+                detector_ms = (t1 - t0) * 1000
 
                 # Capture the current timestamp in ISO 8601 format with UTC timezone. This timestamp is used for WVI output.
                 frame_timestamp = datetime.now(timezone.utc).isoformat()
@@ -90,15 +96,17 @@ def main(argv=None):
                 # ---------------------------------------------------------
                 # Gauge processing
                 # ---------------------------------------------------------
-
+                t0 = time.perf_counter()
                 gauge_reading = process_gauge(
                     result["gauges"]
                 )
+                t1 = time.perf_counter()
+                gauge_ms = (t1 - t0) * 1000
 
                 #---------------------------------------------------------
                 # Drill trigger logic
                 #---------------------------------------------------------
-
+                t0 = time.perf_counter()
                 measurement = None
                 if (
                     gauge_reading is not None
@@ -122,11 +130,13 @@ def main(argv=None):
                             drill_thread.start()
 
                         drill_trigger_armed = False
+                t1 = time.perf_counter()
+                drill_ms = (t1 - t0) * 1000
 
                 # ---------------------------------------------------------
                 # ArUco detection
                 # ---------------------------------------------------------
-
+                t0 = time.perf_counter()
                 # Detect ArUco markers
                 aruco_corners, aruco_ids = detect_aruco(frame)
                 
@@ -143,6 +153,9 @@ def main(argv=None):
                 annotated_frame = pose_estimator.draw(
                     annotated_frame, marker_poses,
                 )
+
+                t1 = time.perf_counter()
+                aruco_ms = (t1 - t0) * 1000
 
                 # ---------------------------------------------------------
                 # Output / debugging
@@ -171,12 +184,42 @@ def main(argv=None):
 
                     frame_count = 0
                     fps_start = time.monotonic()
+
+
+                if SHOW_TIMINGS and timings_prev:
+                    timing_lines = [
+                        f"Loop FPS: {timings_prev['fps']:.1f}",
+                        f"Detector: {timings_prev['detector']:.1f} ms",
+                        f"Gauge: {timings_prev['gauge']:.1f} ms",
+                        f"Drill: {timings_prev['drill']:.1f} ms",
+                        f"ArUco: {timings_prev['aruco']:.1f} ms",
+                        f"WVI prep: {timings_prev['wvi_prep']:.1f} ms",
+                        f"WVI send: {timings_prev['wvi_send']:.1f} ms",
+                        f"Other: {timings_prev['other']:.1f} ms",
+                        f"TOTAL: {timings_prev['total']:.1f} ms",
+                    ]
+
+                    y = 55
+
+                    for line in timing_lines:
+                        cv2.putText(
+                            annotated_frame,
+                            line,
+                            (10, y),
+                            cv2.FONT_HERSHEY_SIMPLEX,
+                            0.45,
+                            (255, 255, 255),
+                            1,
+                            cv2.LINE_AA,
+                        )
+
+                        y += 18
                     
                 # ---------------------------------------------------------
                 # Prepare output for WVI
                 # ---------------------------------------------------------
-
                 # Pack all AIP output into a dictionary and encode the annotated frame as JPEG bytes for WVI. The dictionary includes the timestamp, valve states, gauge reading, and camera positions relative to detected markers.
+                t0 = time.perf_counter()
                 aip_data, aip_image = prepare_wvi_output(
                     result,
                     gauge_reading,
@@ -185,11 +228,19 @@ def main(argv=None):
                     annotated_frame,
                 )
 
+                t1 = time.perf_counter()
+                wvi_prep_ms = (t1 - t0) * 1000
+
                 # Temporary placeholders until WVI communication exists
+                t0 = time.perf_counter()
+
                 try:
                     send_aip_output(aip_data, aip_image)
                 except:
                     print(f"WVI output failure")
+
+                t1 = time.perf_counter()
+                wvi_send_ms = (t1 - t0) * 1000
 
                 # ---------------------------------------------------------
                 # Display
@@ -203,6 +254,40 @@ def main(argv=None):
 
                     if cv2.waitKey(1) & 0xFF == ord("q"):
                         break
+
+                # ---------------------------------------------------------
+                # Store timing information for next frame
+                # ---------------------------------------------------------
+                loop_end = time.perf_counter()
+                total_ms = (loop_end - loop_start) * 1000
+
+                measured_ms = (
+                    detector_ms
+                    + gauge_ms
+                    + drill_ms
+                    + aruco_ms
+                    + wvi_prep_ms
+                    + wvi_send_ms
+                )
+
+                other_ms = max(0.0, total_ms - measured_ms)
+
+                if total_ms > 0:
+                    loop_fps = 1000.0 / total_ms
+                else:
+                    loop_fps = 0.0
+
+                timings_prev = {
+                    "detector": detector_ms,
+                    "gauge": gauge_ms,
+                    "drill": drill_ms,
+                    "aruco": aruco_ms,
+                    "wvi_prep": wvi_prep_ms,
+                    "wvi_send": wvi_send_ms,
+                    "other": other_ms,
+                    "total": total_ms,
+                    "fps": loop_fps,
+                }
 
         except KeyboardInterrupt:
             pass

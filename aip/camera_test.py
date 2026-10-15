@@ -1,25 +1,42 @@
-import cv2
 import depthai as dai
+import time
+
+FPS = 30
+SIZE = 640
 
 with dai.Pipeline() as pipeline:
 
-    cam = pipeline.create(dai.node.Camera).build(
-        dai.CameraBoardSocket.CAM_A
+    camera = (
+        pipeline
+        .create(dai.node.Camera)
+        .build(
+            dai.CameraBoardSocket.CAM_A,
+            sensorFps=FPS,
+        )
     )
 
-    video_queue = (
-        cam.requestOutput((512, 512))
-        .createOutputQueue()
+    output = camera.requestOutput(
+        size=(SIZE, SIZE),
+        type=dai.ImgFrame.Type.BGR888p,
+        resizeMode=dai.ImgResizeMode.CROP,
+    )
+
+    queue = output.createOutputQueue()
+
+    print(
+        "USB speed:",
+        pipeline.getDefaultDevice().getUsbSpeed().name
     )
 
     pipeline.start()
 
-    while pipeline.isRunning():
-        msg = video_queue.get()
-        frame = msg.getCvFrame()
+    count = 0
+    start = time.monotonic()
 
-        cv2.imshow("camera test", frame)
+    while time.monotonic() - start < 10:
+        queue.get()
+        count += 1
 
-        if cv2.waitKey(1) == ord("q"):
-            break
-        
+    elapsed = time.monotonic() - start
+
+    print(f"Camera FPS: {count / elapsed:.1f}")
