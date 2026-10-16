@@ -9,7 +9,7 @@ def jog(direction: str, duration: float):
     servo = Servo(GPIO_PIN)
     
     # Map direction choices to servo speeds (1.0 = forward/down, -1.0 = backward/up)
-    speed = 1.0 if direction.lower() in ['forward', 'down', 'in'] else -1.0
+    speed = -1.0 if direction.lower() in ['forward', 'down', 'in'] else 1.0
     
     print(f"Running servo [{direction.lower()}] (speed: {speed}) for {duration} seconds...")
     
