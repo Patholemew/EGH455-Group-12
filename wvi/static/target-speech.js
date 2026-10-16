@@ -1,7 +1,5 @@
 "use strict";
 
-const SPEECH_COOLDOWN_MS = 10000;
-
 function spokenTarget(target) {
   if (target.type === "valve") {
     if (target.valve_state === "open") return "Open valve detected.";
@@ -29,7 +27,6 @@ class TargetSpeech {
     this.announced = new Map();
     this.utterance = null;
     this.speakingKeys = [];
-    this.lastSpokenAt = -Infinity;
     if (!this.supported) {
       status.textContent = "Speech is not supported by this browser.";
       status.hidden = false;
@@ -99,8 +96,7 @@ class TargetSpeech {
   }
 
   announce() {
-    if (!this.supported || !this.ready || document.hidden || this.utterance
-        || performance.now() - this.lastSpokenAt < SPEECH_COOLDOWN_MS) return false;
+    if (!this.supported || !this.ready || document.hidden || this.utterance) return false;
 
     const targets = this.currentTargets().filter(target =>
       this.announced.get(this.identity(target))?.key !== this.key(target));
@@ -117,9 +113,9 @@ class TargetSpeech {
     this.speakingKeys = targets.map(target => this.key(target));
     utterance.onstart = () => {
       if (this.utterance !== utterance) return;
-      this.lastSpokenAt = performance.now();
+      const startedAt = performance.now();
       for (const target of targets) {
-        this.announced.set(this.identity(target), {key: this.key(target), lastSeen: this.lastSpokenAt});
+        this.announced.set(this.identity(target), {key: this.key(target), lastSeen: startedAt});
       }
     };
     utterance.onend = () => {
@@ -127,7 +123,8 @@ class TargetSpeech {
       this.utterance = null;
       this.speakingKeys = [];
       this.showMode();
-      // The next dashboard refresh checks for another fresh target.
+      // Speak any fresh targets that arrived while this announcement was playing.
+      this.announce();
     };
     utterance.onerror = (event) => {
       if (this.utterance !== utterance) return;
@@ -137,8 +134,6 @@ class TargetSpeech {
         this.status.textContent = "Speech could not play. Check your device's voices, then click or tap to retry.";
       }
     };
-    // Reserve the interval while waiting for the browser's actual start event.
-    this.lastSpokenAt = performance.now();
     try {
       this.synth.speak(utterance);
     } catch (error) {
