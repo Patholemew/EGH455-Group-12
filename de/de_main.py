@@ -4,8 +4,8 @@ from gpiozero import Servo
 
 GPIO_PIN = 13
 
-DRILL_SPEED = 1
-RETURN_SPEED = -1
+DRILL_SPEED = -1
+RETURN_SPEED = 1
 
 DRILL_TIME_S = 10
 PAUSE_TIME_S = 0.5
