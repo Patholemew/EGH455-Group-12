@@ -86,7 +86,7 @@ class TargetSpeech {
     const identities = new Set(current.map(target => this.identity(target)));
     const keys = new Set(current.map(target => this.key(target)));
     for (const [identity, record] of this.announced) {
-      if (this.updatedAt - record.lastSeen >= 10000) this.announced.delete(identity);
+      if (this.updatedAt - record.lastSeen >= 5000) this.announced.delete(identity);
       else if (identities.has(identity)) record.lastSeen = this.updatedAt;
     }
     if (this.speakingKeys.some(key => !keys.has(key))) {
