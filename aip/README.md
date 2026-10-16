@@ -108,9 +108,10 @@ the axes. Camera position is calculated by inverting that transform:
 `-R.T @ tvec`. Failed or non-finite pose solutions are omitted, and positions
 from previous frames are not retained.
 
-The stored calibration is for CAM_A at 1280 x 720. AIP scales its intrinsic
-matrix and offsets its principal point for the detector's letterboxed frame.
-Refresh the calibration from the connected camera with:
+The calibration must match AIP's camera crop and detector resolution. The
+current pipeline takes a 1024 x 1024 camera output, applies the configured
+crop/zoom, and resizes it to the model's 640 x 640 input. Refresh the
+calibration from the connected camera whenever those settings change:
 
 ```bash
 python3 aip/get_camera_intrinsics.py

@@ -1,4 +1,4 @@
-"""Save camera intrinsics for the cropped 512x512 AIP image."""
+"""Save camera intrinsics for the cropped AIP detector image."""
 
 from pathlib import Path
 
@@ -6,11 +6,12 @@ import cv2
 import depthai as dai
 import numpy as np
 
-from oak_detector import CAMERA_HEIGHT, CAMERA_WIDTH, CROP_ZOOM
+from oak_detector import CROP_BASE_SIZE, CROP_POSITION, CROP_ZOOM
 
 
-OUTPUT_WIDTH = 512
-OUTPUT_HEIGHT = 512
+# This must match the input resolution of the model selected in aip_main.py.
+OUTPUT_WIDTH = 640
+OUTPUT_HEIGHT = 640
 CAMERA_SOCKET = dai.CameraBoardSocket.CAM_A
 OUTPUT_PATH = (
     Path(__file__).resolve().parent.parent
@@ -19,19 +20,28 @@ OUTPUT_PATH = (
 )
 
 
-def centred_crop(width, height, zoom):
-    """Return the crop used by OakDetector as (x, y, width, height)."""
+def detector_crop(base_size, zoom, position):
+    """Return OakDetector's square crop as (x, y, width, height)."""
     if zoom < 1.0:
         raise ValueError("CROP_ZOOM must be >= 1.0")
 
-    crop_size = int(min(width, height) / zoom)
+    crop_size = int(base_size / zoom)
     # Keep this alignment identical to OakDetector's ImageManip crop.
     crop_size = (crop_size // 16) * 16
     if crop_size <= 0:
         raise ValueError("Calculated crop size must be positive")
 
-    crop_x = (width - crop_size) // 2
-    crop_y = (height - crop_size) // 2
+    crop_x = (base_size - crop_size) // 2
+    if position == "center":
+        crop_y = (base_size - crop_size) // 2
+    elif position == "bottom":
+        crop_y = base_size - crop_size
+    else:
+        raise ValueError(
+            f"Invalid CROP_POSITION: {position}. "
+            'Use "center" or "bottom".'
+        )
+
     return crop_x, crop_y, crop_size, crop_size
 
 
@@ -56,7 +66,9 @@ def transform_intrinsics(camera_matrix, crop, output_size):
 
 
 def main():
-    crop = centred_crop(CAMERA_WIDTH, CAMERA_HEIGHT, CROP_ZOOM)
+    source_width = CROP_BASE_SIZE
+    source_height = CROP_BASE_SIZE
+    crop = detector_crop(CROP_BASE_SIZE, CROP_ZOOM, CROP_POSITION)
     crop_x, crop_y, crop_width, crop_height = crop
 
     with dai.Device() as device:
@@ -67,8 +79,8 @@ def main():
         source_intrinsics = np.asarray(
             calibration.getCameraIntrinsics(
                 CAMERA_SOCKET,
-                CAMERA_WIDTH,
-                CAMERA_HEIGHT,
+                source_width,
+                source_height,
             ),
             dtype=np.float64,
         )
@@ -83,7 +95,7 @@ def main():
         (OUTPUT_WIDTH, OUTPUT_HEIGHT),
     )
 
-    print(f"Source image: {CAMERA_WIDTH}x{CAMERA_HEIGHT}")
+    print(f"Source image: {source_width}x{source_height}")
     print(
         f"Crop: {crop_width}x{crop_height} at "
         f"({crop_x}, {crop_y})"
@@ -100,13 +112,14 @@ def main():
         storage.write("camera_socket", "CAM_A")
         storage.write("image_width", OUTPUT_WIDTH)
         storage.write("image_height", OUTPUT_HEIGHT)
-        storage.write("source_image_width", CAMERA_WIDTH)
-        storage.write("source_image_height", CAMERA_HEIGHT)
+        storage.write("source_image_width", source_width)
+        storage.write("source_image_height", source_height)
         storage.write("crop_x", crop_x)
         storage.write("crop_y", crop_y)
         storage.write("crop_width", crop_width)
         storage.write("crop_height", crop_height)
         storage.write("crop_zoom", CROP_ZOOM)
+        storage.write("crop_position", CROP_POSITION)
         storage.write("camera_matrix", camera_intrinsics)
         storage.write("distortion_coefficients", distortion_coeffs)
     finally:
