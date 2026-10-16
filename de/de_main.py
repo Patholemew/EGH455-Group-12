@@ -15,19 +15,18 @@ def main():
     """Run the DE subsystem."""
     servo = Servo(GPIO_PIN)
 
-    try:
-        servo.value = DRILL_SPEED
-        sleep(DRILL_TIME_S)
+    servo.value = DRILL_SPEED
+    sleep(DRILL_TIME_S)
 
-        sleep(PAUSE_TIME_S)
+    sleep(PAUSE_TIME_S)
 
-        servo.value = RETURN_SPEED
-        sleep(RETURN_TIME_S)
+    servo.value = RETURN_SPEED
+    sleep(RETURN_TIME_S)
 
         
-        sleep(0.2)
-        servo.detach()
-        servo.close()
+    sleep(0.2)
+    servo.detach()
+    servo.close()
 
 
 if __name__ == "__main__":
