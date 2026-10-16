@@ -14,12 +14,12 @@ NUM_SHAVES = 6
 # Camera crop / digital zoom
 # -------------------------------------------------------------
 
-CROP_ZOOM = 1.3
+CROP_ZOOM = 1.4
 
 # Options:
 #   "center" = crop is centred vertically and horizontally
 #   "bottom" = crop is centred left/right and aligned to bottom
-CROP_POSITION = "center"
+CROP_POSITION = "bottom"
 
 # OAK-D Lite RGB sensor is 4000 x 3000.
 # We first use the central 3000 x 3000 square.
@@ -39,8 +39,8 @@ CLASS_CONFIDENCE = {
     "Plain Gauge": 0.50,
     "Gauge Centre": 0.10,
     "Needle": 0.15,
-    "Open Valve": 0.70,
-    "Closed Valve": 0.70,
+    "Open Valve": 0.55,
+    "Closed Valve": 0.55,
 }
 
 DEFAULT_CONFIDENCE = 0.25
