@@ -5,7 +5,7 @@ import cv2
 import depthai as dai
 
 # Use to enable or disable FPS display on annotated frames
-SHOW_FPS = True
+SHOW_FPS = False
 
 # Used to config model - original was 8, trial 5
 NUM_SHAVES = 6
