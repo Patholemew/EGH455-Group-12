@@ -14,18 +14,18 @@ from oak_detector import OakDetector
 # ============================================================
 
 TRUE_STATE = "open"       # Actual valve state: "open" or "closed"
-TEST_DISTANCE = 0.7       # Distance from camera to valve, metres
-POSITION = "centre"       # Viewing position: "centre", "left", or "right"
+TEST_DISTANCE = 3.0      # Distance from camera to valve, metres
+POSITION = "right"       # Viewing position: "centre", "left", or "right"
 NUM_FRAMES = 200          # Number of frames to record
 
-SHOW_DISPLAY = True
+SHOW_DISPLAY = False
 
 
-# Same model used by aip_main.py
+# Load Object Detection Model
 MODEL = (
     Path(__file__).resolve().parent
     / "models"
-    / "best_15_10_640.rvc2.tar.xz"
+    / "best_15-10_640.rvc2.tar.xz"
 )
 
 # Same minimum NN confidence as aip_main.py
